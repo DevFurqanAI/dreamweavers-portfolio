@@ -1,28 +1,42 @@
 const fallbackUrl = "https://dreamweaversoffice.com";
 
-function normalizeSiteUrl(value: string | undefined) {
-  const candidate = value?.trim() || fallbackUrl;
-  const withProtocol = /^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`;
-  const url = new URL(withProtocol);
-  url.pathname = "/";
-  url.search = "";
-  url.hash = "";
-  return url;
+function toSiteUrl(value: string | undefined) {
+  if (!value?.trim()) return null;
+
+  try {
+    const candidate = /^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`;
+    const url = new URL(candidate);
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    url.pathname = '/';
+    url.search = '';
+    url.hash = '';
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function resolveSiteUrl() {
+  return (
+    toSiteUrl(process.env.NEXT_PUBLIC_SITE_URL) ??
+    toSiteUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL) ??
+    new URL(fallbackUrl)
+  );
 }
 
 export const siteConfig = {
   name: "Dream Weavers",
   legalName: "Dream Weavers",
   shortName: "Dreamweavers",
-  url: normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
+  url: resolveSiteUrl(),
   locale: "en_PK",
-  language: "en",
-  title: "Dream Weavers — Software, E-commerce, AI & Digital Growth",
+  language: "en-PK",
+  title: "Dream Weavers | Software, AI & E-commerce Solutions",
   titleTemplate: "%s | Dream Weavers",
   description:
-    "Dream Weavers builds custom software, ERP and CRM systems, e-commerce platforms, AI integrations, mobile apps, websites and digital growth solutions.",
+    "Dream Weavers builds custom software, ERP and CRM systems, Shopify stores, AI integrations, mobile apps, websites and digital growth solutions in Pakistan.",
   shortDescription:
-    "Custom software, e-commerce, AI, web, mobile and growth systems built as one connected digital experience.",
+    "Connected software, e-commerce, AI, web, mobile and growth systems designed to work as one.",
   email: "info@dreamweaversoffice.com",
   phone: "+923136784511",
   displayPhone: "+92 313 6784511",
@@ -63,20 +77,26 @@ const vercelEnvironment = process.env.VERCEL_ENV;
 const explicitIndexing = process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true";
 
 export const allowIndexing = explicitIndexing && vercelEnvironment !== "preview";
+export const privacyPolicyApproved =
+  process.env.NEXT_PUBLIC_PRIVACY_POLICY_APPROVED === "true";
 
 export function absoluteUrl(path = "/") {
   return new URL(path, siteConfig.url).toString();
 }
 
 export function configuredSameAs() {
-  return (process.env.NEXT_PUBLIC_SOCIAL_URLS || "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter((value) => {
-      try {
-        return new URL(value).protocol === "https:";
-      } catch {
-        return false;
-      }
-    });
+  return Array.from(
+    new Set(
+      (process.env.NEXT_PUBLIC_SOCIAL_URLS || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => {
+          try {
+            return new URL(value).protocol === "https:";
+          } catch {
+            return false;
+          }
+        }),
+    ),
+  );
 }

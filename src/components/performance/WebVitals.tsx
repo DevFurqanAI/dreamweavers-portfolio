@@ -4,13 +4,25 @@ import { useReportWebVitals } from "next/web-vitals";
 
 type ReportCallback = Parameters<typeof useReportWebVitals>[0];
 
-const reportMetric: ReportCallback = (metric) => {
-  const endpoint = process.env.NEXT_PUBLIC_WEB_VITALS_ENDPOINT;
+function measurementEndpoint() {
+  const value = process.env.NEXT_PUBLIC_WEB_VITALS_ENDPOINT;
+  if (!value) return null;
 
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin && url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+const reportMetric: ReportCallback = (metric) => {
   if (process.env.NODE_ENV === "development") {
     console.info("[Web Vitals]", metric.name, metric.value);
   }
 
+  const endpoint = measurementEndpoint();
   if (!endpoint) return;
 
   const body = JSON.stringify({
@@ -22,8 +34,11 @@ const reportMetric: ReportCallback = (metric) => {
   });
 
   if (navigator.sendBeacon) {
-    navigator.sendBeacon(endpoint, new Blob([body], { type: "application/json" }));
-    return;
+    const accepted = navigator.sendBeacon(
+      endpoint,
+      new Blob([body], { type: "application/json" }),
+    );
+    if (accepted) return;
   }
 
   void fetch(endpoint, {
@@ -31,6 +46,7 @@ const reportMetric: ReportCallback = (metric) => {
     body,
     headers: { "Content-Type": "application/json" },
     keepalive: true,
+    credentials: "omit",
   });
 };
 

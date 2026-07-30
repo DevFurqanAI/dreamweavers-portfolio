@@ -63,12 +63,12 @@ export const metadata: Metadata = {
         noarchive: true,
         nocache: true,
       },
-  icons: {
-    icon: [{ url: "/icon.png", type: "image/png" }],
-    shortcut: "/icon.png",
-    apple: "/icon.png",
-  },
   manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: siteConfig.shortName,
+    statusBarStyle: "default",
+  },
   referrer: "strict-origin-when-cross-origin",
   formatDetection: {
     telephone: false,

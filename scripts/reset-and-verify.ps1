@@ -1,11 +1,12 @@
 $ErrorActionPreference = "Stop"
 
-Write-Host "Removing the previous dependency tree..." -ForegroundColor Cyan
+if (-not (Test-Path "package-lock.json")) {
+  throw "package-lock.json is required. Restore it from Git before continuing."
+}
+
+Write-Host "Removing generated dependency and build folders..." -ForegroundColor Cyan
 if (Test-Path "node_modules") {
   Remove-Item -Recurse -Force "node_modules"
-}
-if (Test-Path "package-lock.json") {
-  Remove-Item -Force "package-lock.json"
 }
 if (Test-Path ".next") {
   Remove-Item -Recurse -Force ".next"
@@ -14,19 +15,13 @@ if (Test-Path ".next") {
 Write-Host "Verifying npm cache..." -ForegroundColor Cyan
 npm cache verify
 
-Write-Host "Installing dependencies..." -ForegroundColor Cyan
-npm install
+Write-Host "Installing the exact locked dependency tree..." -ForegroundColor Cyan
+npm ci
 
 Write-Host "Checking production dependencies..." -ForegroundColor Cyan
-npm audit --omit=dev
+npm run audit:prod
 
-Write-Host "Running lint..." -ForegroundColor Cyan
-npm run lint
-
-Write-Host "Running TypeScript checks..." -ForegroundColor Cyan
-npm run typecheck
-
-Write-Host "Creating a production build..." -ForegroundColor Cyan
-npm run build
+Write-Host "Running lint, TypeScript and production build checks..." -ForegroundColor Cyan
+npm run check
 
 Write-Host "All required checks passed." -ForegroundColor Green

@@ -1,0 +1,17 @@
+# Animation Freeze Checksums
+
+The following files are intentionally unchanged from the deployed GitHub baseline. Re-run `sha256sum` before merging production hardening work.
+
+```text
+dc11a533f1c1300be93c5cb6db77011f6bed1ead69ed664fa9970e889eb3ac6f  src/app/page.tsx
+f3d702e55073940e3e08df0d95ebe040abfb2141beacc0e4d387c3fa16401c97  src/app/globals.css
+e2c839e7a31b6f0d03d0076efb97b8b77e409252abe16bcd5d13ee0232375763  src/components/CustomCursor.tsx
+3e8b3bbf7dee3dd42fccef522a509c80c7423f44d278dcffc1eba6e6e6867c1e  src/components/ExperienceShell.tsx
+e4a011b90d7586b4ee2ed9e86722b725eaea228ca7af9815160fbaa2351463d6  src/components/IntroGate.tsx
+6242bf6d946042e5cc6edc4edb3eab23420ca1247f1e79bcffbd56800dd4e086  src/components/MotionController.tsx
+8d6ad8ad87e696e0ae147712a564e2c38bfddeb6ec49f7a50ec1338dd42b4f99  src/components/MotionShell.tsx
+1ba544cc8573c6765485b5300797a1e8dcf5b7186d9c29a529fcd543325e6aca  src/experience/CameraRig.tsx
+50e15120c64ea8ab4e172ef7b3aeda1ee9ce75d5ae6330dbcf382ccd44237fea  src/experience/ExperienceCanvas.tsx
+df4540d7da43231ab8e068c4fc2962023ff9f9f10499bfb5cd25d80b03ab27ac  src/experience/LoomField.tsx
+2e8cb8404cb3d88802ce8ff666d38ae8440bac3756c51dd2d8a2f19e9e45aacb  src/experience/SceneBackdrop.tsx
+```

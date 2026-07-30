@@ -1,59 +1,31 @@
 # Dreamweavers Immersive Portfolio
 
-A production-oriented, animation-first Next.js portfolio prototype for Dreamweavers.
+A production-oriented, animation-first Next.js portfolio for Dream Weavers.
 
-## Included in this milestone
+## Current baseline
 
-- Next.js App Router and strict TypeScript structure
-- Persistent React Three Fiber canvas
-- Interactive Three.js Dream Core
-- GSAP and ScrollTrigger scene synchronization
-- Cinematic intro transition
-- Responsive animated navigation
-- Semantic SEO-friendly homepage content
-- Services, work placeholders, clients, process, industries, team and contact sections
-- Real team names, roles, photographs and supplied client logos
-- Reduced-motion, touch and WebGL fallbacks
-- Server-side contact validation with an optional webhook
-- Sitemap, robots, web manifest and draft privacy route
-- Security headers and dependency overrides
+- Next.js App Router and strict TypeScript
+- Persistent React Three Fiber / Three.js experience
+- GSAP and ScrollTrigger motion system
+- Responsive navigation, reduced-motion handling and WebGL fallbacks
+- Semantic homepage content and structured metadata
+- Contact route with server-side validation, honeypot protection and rate limiting
+- Robots, sitemap, web manifest, Open Graph image and security headers
+
+The animation and visual files are intentionally frozen during the current production-hardening phase. See `docs/ANIMATION_FREEZE_SHA256.md`.
 
 ## Install
 
-This project was prepared without a generated `package-lock.json`. On your computer, run:
+The repository includes `package-lock.json`. Use the exact locked dependency tree:
 
 ```powershell
-cd "D:\Internship Projects\Company Portfolio V1\dreamweavers-portfolio"
-npm install
+npm ci
 ```
 
-Then verify the dependency tree:
+Do not run `npm audit fix --force`. The production dependency audit is the relevant deployment check:
 
 ```powershell
-npm ls next react react-dom postcss sharp three @react-three/fiber @react-three/drei gsap
-npm audit --omit=dev
-```
-
-Do not run `npm audit fix --force`.
-
-
-### Recovering from a damaged npm install
-
-If ESLint reports a missing internal `hermes-parser` file after `npm audit fix`, rebuild the dependency tree instead of forcing upgrades:
-
-```powershell
-Remove-Item -Recurse -Force node_modules
-Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue
-npm cache verify
-npm install
-```
-
-The project now declares `@types/three@0.185.1` directly and uses React Three Fiber `9.6.1` so Three.js and JSX types are resolved consistently.
-
-The included helper performs the same clean reset and validation sequence:
-
-```powershell
-PowerShell -ExecutionPolicy Bypass -File .\scripts\reset-and-verify.ps1
+npm run audit:prod
 ```
 
 ## Development
@@ -67,58 +39,61 @@ Open `http://localhost:3000`.
 ## Required checks
 
 ```powershell
-npm run lint
-npm run typecheck
-npm run build
+npm run check
 ```
+
+For the full production verification sequence:
+
+```powershell
+npm run verify
+```
+
+The included PowerShell helper performs a clean locked install and runs the same checks:
+
+```powershell
+PowerShell -ExecutionPolicy Bypass -File .\scripts\reset-and-verify.ps1
+```
+
+## Environment variables
+
+Copy `.env.example` to `.env.local` for local testing. Configure the equivalent values in Vercel for Preview and Production.
+
+Important launch controls:
+
+```env
+NEXT_PUBLIC_ALLOW_INDEXING=false
+NEXT_PUBLIC_PRIVACY_POLICY_APPROVED=false
+```
+
+Keep both values `false` on Preview deployments. Enable indexing on Production only after the final domain, content and privacy notice are approved.
 
 ## Contact delivery
 
-Copy `.env.example` to `.env.local` and set `CONTACT_WEBHOOK_URL` to a private server-side endpoint that accepts JSON POST requests.
+Set a private server-side webhook endpoint:
 
 ```env
 CONTACT_WEBHOOK_URL=https://your-secure-endpoint.example/inquiries
-NEXT_PUBLIC_SITE_URL=https://dreamweaversoffice.com
+CONTACT_WEBHOOK_SECRET=replace-with-a-private-secret
+CONTACT_ALLOWED_ORIGINS=https://dreamweaversoffice.com
 ```
 
-Without this variable, the form intentionally displays a clear configuration message rather than pretending an inquiry was delivered.
+`CONTACT_WEBHOOK_SECRET` is sent as a Bearer token to the configured webhook. Never prefix server-only secrets with `NEXT_PUBLIC_`.
+
+Without a valid webhook URL, the form displays the company email rather than pretending a submission was delivered.
 
 ## Content editing
 
 Edit `src/content/site.ts`.
 
-Only these legacy items were treated as verified in the supplied prototype:
+Only team names, roles, photographs, and supplied client logos were treated as verified from the original prototype. Project case studies, results and performance claims remain placeholders until the client approves them.
 
-- Team names and roles
-- Team photographs
-- Client logos and names
+## Vercel deployment
 
-Project case studies and performance claims remain placeholders until the client supplies approved information.
+- Framework preset: Next.js
+- Production branch: `main`
+- Preview branch for this work: `production-enhancements`
+- Keep Preview indexing disabled
+- Add sensitive server variables using Vercel Environment Variables
+- Run `npm run verify` before merging to `main`
 
-## Deployment to Vercel
-
-1. Push the parent repository to GitHub.
-2. Import it into Vercel.
-3. Set **Root Directory** to `dreamweavers-portfolio`.
-4. Add environment variables for Preview and Production.
-5. Run a Preview deployment first.
-6. Test WebGL, reduced motion, mobile layout and contact delivery before connecting the production domain.
-
-For commercial use, select a Vercel plan appropriate for the company website.
-
-## Production hardening
-
-SEO, metadata, performance and security controls are documented in:
-
-```text
-docs/PRODUCTION_HARDENING.md
-```
-
-Before a public launch, copy `.env.example` to `.env.local` for local testing and configure the same variables in Vercel. Keep indexing disabled on preview deployments.
-
-Validation commands:
-
-```powershell
-npm run audit:prod
-npm run check
-```
+See `docs/PRODUCTION_ENHANCEMENTS.md` for the complete launch checklist and security notes.

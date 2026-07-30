@@ -1,11 +1,20 @@
+import { createHash, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { siteConfig } from "@/config/site";
-import { consumeContactAttempt } from "@/lib/security/contact-rate-limit";
+import {
+  consumeContactAttempt,
+  type ContactRateLimit,
+} from "@/lib/security/contact-rate-limit";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const MAX_BODY_BYTES = 12_000;
 
 const inquirySchema = z.object({
   name: z.string().trim().min(2).max(80),
-  email: z.string().trim().email().max(160),
+  email: z.string().trim().email().max(160).transform((value) => value.toLowerCase()),
   company: z.string().trim().max(100).optional().default(""),
   projectType: z.string().trim().max(100).optional().default(""),
   message: z.string().trim().min(20).max(2000),
@@ -18,9 +27,27 @@ const responseHeaders = {
   "X-Robots-Tag": "noindex, nofollow, noarchive",
 };
 
-function json(message: string, status = 200, extraHeaders?: Record<string, string>) {
+function rateLimitHeaders(rateLimit: ContactRateLimit) {
+  return {
+    "RateLimit-Limit": String(rateLimit.limit),
+    "RateLimit-Remaining": String(rateLimit.remaining),
+    "RateLimit-Reset": String(
+      Math.max(0, Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+    ),
+    ...(rateLimit.retryAfterSeconds > 0
+      ? { "Retry-After": String(rateLimit.retryAfterSeconds) }
+      : {}),
+  };
+}
+
+function json(
+  message: string,
+  status = 200,
+  extraHeaders?: Record<string, string>,
+  reference?: string,
+) {
   return NextResponse.json(
-    { message },
+    { message, ...(reference ? { reference } : {}) },
     {
       status,
       headers: { ...responseHeaders, ...extraHeaders },
@@ -30,7 +57,25 @@ function json(message: string, status = 200, extraHeaders?: Record<string, strin
 
 function clientKey(request: Request) {
   const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwardedFor || request.headers.get("x-real-ip") || "unknown";
+  const address = forwardedFor || request.headers.get("x-real-ip") || "unknown";
+  const userAgent = request.headers.get("user-agent") || "unknown";
+
+  return createHash("sha256").update(`${address}|${userAgent}`).digest("hex");
+}
+
+function configuredOrigins() {
+  return (process.env.CONTACT_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .flatMap((value) => {
+      try {
+        const url = new URL(value);
+        return [url.origin];
+      } catch {
+        return [];
+      }
+    });
 }
 
 function isAllowedRequestOrigin(request: Request) {
@@ -40,12 +85,11 @@ function isAllowedRequestOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return true;
 
-  const configuredOrigins = (process.env.CONTACT_ALLOWED_ORIGINS || "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  const allowed = new Set([siteConfig.url.origin, new URL(request.url).origin, ...configuredOrigins]);
+  const allowed = new Set([
+    siteConfig.url.origin,
+    new URL(request.url).origin,
+    ...configuredOrigins(),
+  ]);
   return allowed.has(origin);
 }
 
@@ -56,10 +100,35 @@ function safeWebhookUrl() {
   try {
     const url = new URL(value);
     if (process.env.NODE_ENV === "production" && url.protocol !== "https:") return null;
+    if (!["http:", "https:"].includes(url.protocol)) return null;
     if (url.username || url.password) return null;
     return url;
   } catch {
     return null;
+  }
+}
+
+function webhookAuthorizationValue() {
+  const secret = process.env.CONTACT_WEBHOOK_SECRET?.trim();
+  if (!secret || secret.length > 500 || /[\r\n]/.test(secret)) return null;
+  return `Bearer ${secret}`;
+}
+
+async function readJsonBody(request: Request) {
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return { ok: false as const, status: 413, message: "The submission is too large." };
+  }
+
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) {
+    return { ok: false as const, status: 413, message: "The submission is too large." };
+  }
+
+  try {
+    return { ok: true as const, body: JSON.parse(raw) as unknown };
+  } catch {
+    return { ok: false as const, status: 400, message: "Invalid request body." };
   }
 }
 
@@ -73,52 +142,62 @@ export async function POST(request: Request) {
     return json("Unsupported request format.", 415);
   }
 
-  const contentLength = Number(request.headers.get("content-length") || 0);
-  if (!Number.isFinite(contentLength) || contentLength > 12_000) {
-    return json("The submission is too large.", 413);
-  }
-
   const rateLimit = consumeContactAttempt(clientKey(request));
+  const limitHeaders = rateLimitHeaders(rateLimit);
   if (!rateLimit.allowed) {
-    return json("Too many attempts. Please wait before trying again.", 429, {
-      "Retry-After": String(rateLimit.retryAfterSeconds),
-    });
+    return json(
+      "Too many attempts. Please wait before trying again.",
+      429,
+      limitHeaders,
+    );
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return json("Invalid request body.", 400);
+  const bodyResult = await readJsonBody(request);
+  if (!bodyResult.ok) {
+    return json(bodyResult.message, bodyResult.status, limitHeaders);
   }
 
-  const parsed = inquirySchema.safeParse(body);
+  const parsed = inquirySchema.safeParse(bodyResult.body);
   if (!parsed.success) {
-    return json("Please check the form fields and try again.", 400);
+    return json("Please check the form fields and try again.", 400, limitHeaders);
   }
 
   if (parsed.data.website) {
-    return json("Your inquiry has been received.");
+    return json("Your inquiry has been received.", 200, limitHeaders);
   }
 
   const webhook = safeWebhookUrl();
   if (!webhook) {
-    return json(`Form delivery is not configured yet. Please email ${siteConfig.email}.`, 503);
+    return json(
+      `Form delivery is not configured yet. Please email ${siteConfig.email}.`,
+      503,
+      limitHeaders,
+    );
   }
 
   const { website: _honeypot, privacyConsent: _privacyConsent, ...inquiry } = parsed.data;
   void _honeypot;
   void _privacyConsent;
 
+  const submissionId = randomUUID();
+
   try {
+    const webhookHeaders = new Headers({
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": "DreamWeavers-Portfolio/1.0",
+      "X-DreamWeavers-Submission-Id": submissionId,
+    });
+
+    const authorization = webhookAuthorizationValue();
+    if (authorization) webhookHeaders.set("Authorization", authorization);
+
     const response = await fetch(webhook, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "DreamWeavers-Portfolio/1.0",
-      },
+      headers: webhookHeaders,
       body: JSON.stringify({
         source: "dreamweavers-portfolio",
+        submissionId,
         submittedAt: new Date().toISOString(),
         inquiry,
       }),
@@ -127,8 +206,12 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) throw new Error(`Webhook responded with ${response.status}`);
-    return json("Thank you. Your inquiry has been sent.");
+    return json("Thank you. Your inquiry has been sent.", 200, limitHeaders, submissionId);
   } catch {
-    return json(`Delivery is temporarily unavailable. Please email ${siteConfig.email}.`, 502);
+    return json(
+      `Delivery is temporarily unavailable. Please email ${siteConfig.email}.`,
+      502,
+      limitHeaders,
+    );
   }
 }

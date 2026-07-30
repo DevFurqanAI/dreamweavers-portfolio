@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { siteConfig } from "@/config/site";
+import {
+  allowIndexing,
+  privacyPolicyApproved,
+  siteConfig,
+} from "@/config/site";
 
 export const metadata: Metadata = {
   title: "Privacy",
   description: `How ${siteConfig.name} handles contact-form information and website measurement data.`,
   alternates: { canonical: "/privacy" },
+  robots:
+    allowIndexing && privacyPolicyApproved
+      ? { index: true, follow: true }
+      : { index: false, follow: false, noarchive: true },
 };
 
 export default function PrivacyPage() {
@@ -14,14 +22,25 @@ export default function PrivacyPage() {
       <Link href="/" className="text-link">← Return home</Link>
       <p className="eyebrow"><span>Privacy notice</span><i /></p>
       <h1>Privacy</h1>
+
+      <h2>Information you submit</h2>
       <p>
-        The contact form collects the information you choose to submit so Dream Weavers can review and respond to your inquiry.
+        The project inquiry form may collect your name, work email, company, project type and the message you choose to provide. Please do not submit passwords, payment details, identity documents or other sensitive information through the form.
       </p>
+
+      <h2>How the information is used</h2>
       <p>
-        The production form provider, retention period, analytics configuration and deletion process must be confirmed before public launch. Until those details are approved, this page remains a launch-ready draft rather than legal advice.
+        Dream Weavers uses inquiry information to review your request, contact you about the proposed work and maintain reasonable records of the conversation. When contact delivery is enabled, the submission is sent to the private provider configured by Dream Weavers.
       </p>
+
+      <h2>Website measurement</h2>
       <p>
-        Privacy questions can be sent to <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>.
+        The site can report performance measurements such as page path, loading speed and interaction timing to a configured measurement endpoint. Contact-form contents are not included in those performance reports.
+      </p>
+
+      <h2>Retention and requests</h2>
+      <p>
+        Final retention periods and provider-specific terms must be confirmed by Dream Weavers before this notice is approved for public indexing. You may request access, correction or deletion by emailing <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>.
       </p>
     </main>
   );

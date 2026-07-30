@@ -9,12 +9,15 @@ export function GET() {
     `Expires: ${expires}`,
     `Canonical: ${new URL("/.well-known/security.txt", siteConfig.url).toString()}`,
     "Preferred-Languages: en, ur",
+    "",
   ].join("\n");
 
   return new Response(body, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      "Access-Control-Allow-Origin": "*",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

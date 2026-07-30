@@ -19,6 +19,7 @@ const allowIndexing =
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+  "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
@@ -39,6 +40,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
@@ -68,6 +70,8 @@ const securityHeaders = [
     : []),
 ];
 
+const publicAssetCache = "public, max-age=2592000, stale-while-revalidate=31536000";
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
@@ -75,7 +79,7 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   images: {
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 86_400,
+    minimumCacheTTL: 2_678_400,
     qualities: [60, 70, 75, 80, 90],
   },
   async headers() {
@@ -86,30 +90,19 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/brand/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=604800, stale-while-revalidate=2592000",
-          },
-        ],
+        headers: [{ key: "Cache-Control", value: publicAssetCache }],
       },
       {
         source: "/clients/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=604800, stale-while-revalidate=2592000",
-          },
-        ],
+        headers: [{ key: "Cache-Control", value: publicAssetCache }],
       },
       {
         source: "/team/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=604800, stale-while-revalidate=2592000",
-          },
-        ],
+        headers: [{ key: "Cache-Control", value: publicAssetCache }],
+      },
+      {
+        source: "/icons/:path*",
+        headers: [{ key: "Cache-Control", value: publicAssetCache }],
       },
     ];
   },

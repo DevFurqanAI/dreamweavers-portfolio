@@ -7,6 +7,7 @@ function serializeJsonLd(value: unknown) {
 export function StructuredData() {
   const organizationId = `${siteConfig.url.toString()}#organization`;
   const websiteId = `${siteConfig.url.toString()}#website`;
+  const webpageId = `${siteConfig.url.toString()}#webpage`;
   const sameAs = configuredSameAs();
 
   const graph = {
@@ -40,6 +41,18 @@ export function StructuredData() {
           availableLanguage: ["English", "Urdu"],
         },
         knowsAbout: siteConfig.services,
+        hasOfferCatalog: {
+          "@type": "OfferCatalog",
+          name: "Digital services",
+          itemListElement: siteConfig.services.map((service) => ({
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Service",
+              name: service,
+              provider: { "@id": organizationId },
+            },
+          })),
+        },
         ...(sameAs.length > 0 ? { sameAs } : {}),
       },
       {
@@ -50,6 +63,22 @@ export function StructuredData() {
         description: siteConfig.shortDescription,
         inLanguage: siteConfig.language,
         publisher: { "@id": organizationId },
+      },
+      {
+        "@type": "WebPage",
+        "@id": webpageId,
+        url: siteConfig.url.toString(),
+        name: siteConfig.title,
+        description: siteConfig.description,
+        inLanguage: siteConfig.language,
+        isPartOf: { "@id": websiteId },
+        about: { "@id": organizationId },
+        primaryImageOfPage: {
+          "@type": "ImageObject",
+          url: absoluteUrl("/opengraph-image"),
+          width: 1200,
+          height: 630,
+        },
       },
     ],
   };

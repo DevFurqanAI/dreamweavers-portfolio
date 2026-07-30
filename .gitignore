@@ -74,13 +74,6 @@
 **/*.njsproj
 **/*.sln
 **/*.user
-docs
-AGENTS.md
-references
-SECURITY.md
-DEPENDENCY_SECURITY.md
-FIX_NOTES.md
-PATCH_README.md
 
 # VS Code: ignore personal settings, but allow shared recommendations
 **/.vscode/*

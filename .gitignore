@@ -1,0 +1,102 @@
+# Company Portfolio V1 — root .gitignore
+# Place this file in:
+# Company Portfolio V1/.gitignore
+
+# --------------------------------------------------
+# Dependencies
+# --------------------------------------------------
+**/node_modules/
+**/.pnp
+**/.pnp.*
+**/.yarn/cache/
+**/.yarn/unplugged/
+**/.yarn/build-state.yml
+**/.yarn/install-state.gz
+
+# --------------------------------------------------
+# Next.js / build output
+# --------------------------------------------------
+**/.next/
+**/out/
+**/.turbo/
+**/coverage/
+**/.vercel/
+
+# --------------------------------------------------
+# Environment variables and secrets
+# Keep .env.example files committed.
+# --------------------------------------------------
+**/.env
+**/.env.*
+!**/.env.example
+
+# --------------------------------------------------
+# TypeScript
+# --------------------------------------------------
+**/*.tsbuildinfo
+**/next-env.d.ts
+
+# --------------------------------------------------
+# Logs
+# --------------------------------------------------
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/lerna-debug.log*
+
+# --------------------------------------------------
+# Local caches and temporary files
+# --------------------------------------------------
+**/.cache/
+**/.eslintcache
+**/*.tmp
+**/*.temp
+**/*.swp
+**/*.swo
+
+# --------------------------------------------------
+# Operating-system files
+# --------------------------------------------------
+**/.DS_Store
+**/Thumbs.db
+**/Desktop.ini
+**/$RECYCLE.BIN/
+
+# --------------------------------------------------
+# IDE / editor files
+# --------------------------------------------------
+**/.idea/
+**/.fleet/
+**/.history/
+**/*.suo
+**/*.ntvs*
+**/*.njsproj
+**/*.sln
+**/*.user
+docs
+AGENTS.md
+references
+SECURITY.md
+DEPENDENCY_SECURITY.md
+FIX_NOTES.md
+PATCH_README.md
+
+# VS Code: ignore personal settings, but allow shared recommendations
+**/.vscode/*
+!**/.vscode/extensions.json
+!**/.vscode/settings.example.json
+
+# --------------------------------------------------
+# Certificates and private keys
+# --------------------------------------------------
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+
+# --------------------------------------------------
+# Local backups created during development
+# --------------------------------------------------
+dreamweavers-portfolio-backup/
+dreamweavers-portfolio-*-backup/

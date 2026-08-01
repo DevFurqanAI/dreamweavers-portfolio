@@ -12,6 +12,8 @@ export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 12_000;
 
+const MIN_FILL_TIME_MS = 2_500;
+
 const inquirySchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().email().max(160).transform((value) => value.toLowerCase()),
@@ -20,6 +22,7 @@ const inquirySchema = z.object({
   message: z.string().trim().min(20).max(2000),
   privacyConsent: z.literal("on"),
   website: z.string().max(200).optional().default(""),
+  startedAt: z.number().finite().optional(),
 });
 
 const responseHeaders = {
@@ -82,8 +85,12 @@ function isAllowedRequestOrigin(request: Request) {
   const fetchSite = request.headers.get("sec-fetch-site");
   if (fetchSite === "cross-site") return false;
 
+  // Modern browsers always send Origin on non-GET fetch/XHR requests, so a
+  // missing Origin means the caller is not our frontend (a script, curl,
+  // etc.) rather than a legitimate same-origin browser request. Reject it
+  // instead of letting it fall through unauthenticated.
   const origin = request.headers.get("origin");
-  if (!origin) return true;
+  if (!origin) return false;
 
   const allowed = new Set([
     siteConfig.url.origin,
@@ -162,7 +169,10 @@ export async function POST(request: Request) {
     return json("Please check the form fields and try again.", 400, limitHeaders);
   }
 
-  if (parsed.data.website) {
+  const filledTooFast =
+    parsed.data.startedAt !== undefined && Date.now() - parsed.data.startedAt < MIN_FILL_TIME_MS;
+
+  if (parsed.data.website || filledTooFast) {
     return json("Your inquiry has been received.", 200, limitHeaders);
   }
 
@@ -175,9 +185,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const { website: _honeypot, privacyConsent: _privacyConsent, ...inquiry } = parsed.data;
+  const {
+    website: _honeypot,
+    privacyConsent: _privacyConsent,
+    startedAt: _startedAt,
+    ...inquiry
+  } = parsed.data;
   void _honeypot;
   void _privacyConsent;
+  void _startedAt;
 
   const submissionId = randomUUID();
 

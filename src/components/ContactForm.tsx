@@ -1,17 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 type Status = { type: "idle" | "loading" | "success" | "error"; message: string };
 
 export function ContactForm() {
   const [status, setStatus] = useState<Status>({ type: "idle", message: "" });
+  const renderedAt = useRef<number | null>(null);
+
+  useEffect(() => {
+    renderedAt.current = Date.now();
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    const data = Object.fromEntries(new FormData(form).entries());
+    const data = {
+      ...Object.fromEntries(new FormData(form).entries()),
+      startedAt: renderedAt.current,
+    };
     setStatus({ type: "loading", message: "Preparing your inquiry…" });
 
     try {

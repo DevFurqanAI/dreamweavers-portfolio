@@ -19,24 +19,27 @@ export function MotionController() {
       }
 
       const nativeCleanups: Array<() => void> = [];
-      const reveals = gsap.utils.toArray<HTMLElement>("[data-reveal]");
-      reveals.forEach((element) => {
-        gsap.fromTo(
-          element,
-          { y: 56, opacity: 0, filter: "blur(10px)" },
-          {
-            y: 0,
-            opacity: 1,
-            filter: "blur(0px)",
-            duration: 1.05,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: element,
-              start: "top 86%",
-              once: true,
+      // ScrollTrigger.batch coalesces elements that cross the viewport in the
+      // same scroll tick into one onEnter callback instead of letting each of
+      // the ~10 [data-reveal] elements run as an independent ScrollTrigger.
+      // A fast scroll that carries several sections past "top 86%" at once
+      // previously fired that many separate tween-starts back to back.
+      ScrollTrigger.batch("[data-reveal]", {
+        start: "top 86%",
+        once: true,
+        onEnter: (batch) =>
+          gsap.fromTo(
+            batch,
+            { y: 56, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 1.05,
+              ease: "power3.out",
+              stagger: 0.06,
+              overwrite: true,
             },
-          },
-        );
+          ),
       });
 
       gsap.fromTo(

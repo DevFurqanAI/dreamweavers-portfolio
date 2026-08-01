@@ -27,6 +27,7 @@ export default function ExperienceCanvas() {
   useEffect(() => {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+    (gl as WebGLRenderingContext | null)?.getExtension("WEBGL_lose_context")?.loseContext();
     const supportFrame = window.requestAnimationFrame(() => setSupported(Boolean(gl)));
 
     const onStage = (event: Event) => {

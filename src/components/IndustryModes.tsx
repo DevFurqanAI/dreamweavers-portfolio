@@ -65,7 +65,9 @@ export function IndustryModes({ modes }: { modes: IndustryMode[] }) {
               aria-pressed={index === activeIndex}
               suppressHydrationWarning
               onClick={() => activate(index)}
-              onPointerEnter={() => activate(index)}
+              onPointerEnter={(event) => {
+                if (event.pointerType === "mouse") activate(index);
+              }}
             >
               <span>{mode.index}</span>
               <strong>{mode.title}</strong>

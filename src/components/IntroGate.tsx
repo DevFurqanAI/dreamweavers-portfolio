@@ -19,7 +19,11 @@ export function IntroGate() {
     }
 
     if (reduced || disabled || alreadySeen) {
-      const frame = window.requestAnimationFrame(() => setVisible(false));
+      document.documentElement.dataset.introDone = "true";
+      const frame = window.requestAnimationFrame(() => {
+        setVisible(false);
+        window.dispatchEvent(new Event("dw:introDone"));
+      });
       return () => window.cancelAnimationFrame(frame);
     }
 
@@ -33,6 +37,8 @@ export function IntroGate() {
     const timer = window.setTimeout(() => {
       setVisible(false);
       document.documentElement.classList.remove("intro-active");
+      document.documentElement.dataset.introDone = "true";
+      window.dispatchEvent(new Event("dw:introDone"));
     }, 850);
 
     return () => {

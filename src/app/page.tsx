@@ -79,7 +79,7 @@ export default function Home() {
 
             <div className="services-grid">
               {services.map((service, index) => (
-                <article className={`service-card service-card--${index + 1}`} key={service.slug} data-cursor="view">
+                <article className={`service-card service-card--${index + 1}`} key={service.slug} data-cursor="view" data-cursor-label="Explore">
                   <div className="service-card__top">
                     <span>{String(index + 1).padStart(2, "0")}</span>
                     <i aria-hidden="true">↗</i>
@@ -122,7 +122,7 @@ export default function Home() {
 
             <div className="work-showcase">
               {projectConcepts.map((project, index) => (
-                <article className={`work-project work-project--${index + 1}`} key={project.index} data-cursor="view">
+                <article className={`work-project work-project--${index + 1}`} key={project.index} data-cursor="view" data-cursor-label="View project">
                   <div className="work-project__copy">
                     <div className="work-project__meta">
                       <span>Project concept / {project.index}</span>
@@ -140,22 +140,24 @@ export default function Home() {
                   </div>
 
                   <div className="work-project__visual" aria-hidden="true">
-                    <span className="work-project__huge-index">{project.index}</span>
-                    <div className="work-project__poster">
-                      <div className="work-project__poster-top">
-                        <span>Dreamweavers</span>
-                        <span>{project.index} / 03</span>
+                    <div className="work-project__tilt">
+                      <span className="work-project__huge-index">{project.index}</span>
+                      <div className="work-project__poster">
+                        <div className="work-project__poster-top">
+                          <span>Dreamweavers</span>
+                          <span>{project.index} / 03</span>
+                        </div>
+                        <div className="work-project__orbit">
+                          <i /><i /><i />
+                          <b>{project.title.slice(0, 2).toUpperCase()}</b>
+                        </div>
+                        <div className="work-project__poster-bottom">
+                          <strong>{project.title}</strong>
+                          <span>System / Experience / Growth</span>
+                        </div>
                       </div>
-                      <div className="work-project__orbit">
-                        <i /><i /><i />
-                        <b>{project.title.slice(0, 2).toUpperCase()}</b>
-                      </div>
-                      <div className="work-project__poster-bottom">
-                        <strong>{project.title}</strong>
-                        <span>System / Experience / Growth</span>
-                      </div>
+                      <div className="work-project__threads"><span /><span /><span /><span /></div>
                     </div>
-                    <div className="work-project__threads"><span /><span /><span /><span /></div>
                   </div>
                 </article>
               ))}

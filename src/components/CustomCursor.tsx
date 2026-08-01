@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 export function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const finePointer = window.matchMedia("(pointer: fine)").matches;
@@ -13,7 +14,8 @@ export function CustomCursor() {
 
     const dot = dotRef.current;
     const ring = ringRef.current;
-    if (!dot || !ring) return;
+    const label = labelRef.current;
+    if (!dot || !ring || !label) return;
 
     let targetX = window.innerWidth / 2;
     let targetY = window.innerHeight / 2;
@@ -32,6 +34,11 @@ export function CustomCursor() {
       const target = event.target as HTMLElement | null;
       const active = Boolean(target?.closest("a, button, input, textarea, select, [data-cursor]"));
       ring.classList.toggle("is-active", active);
+
+      const viewTarget = target?.closest<HTMLElement>('[data-cursor="view"]') ?? null;
+      ring.classList.toggle("is-view", Boolean(viewTarget));
+      dot.style.opacity = viewTarget ? "0" : "1";
+      if (viewTarget) label.textContent = viewTarget.dataset.cursorLabel || "View";
     };
 
     const tick = () => {
@@ -56,7 +63,9 @@ export function CustomCursor() {
   return (
     <div className="cursor-layer" aria-hidden="true">
       <div className="cursor-dot" ref={dotRef} />
-      <div className="cursor-ring" ref={ringRef} />
+      <div className="cursor-ring" ref={ringRef}>
+        <span className="cursor-ring__label" ref={labelRef}>View</span>
+      </div>
     </div>
   );
 }

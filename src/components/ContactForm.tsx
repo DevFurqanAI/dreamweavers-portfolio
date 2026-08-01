@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { siteConfig } from "@/config/site";
 
 type Status = { type: "idle" | "loading" | "success" | "error"; message: string };
 
@@ -99,7 +100,7 @@ export function ContactForm() {
           <i aria-hidden="true">↗</i>
         </button>
         <p className={`form-status is-${status.type}`} role="status" aria-live="polite">
-          {status.message || "Delivery activates after CONTACT_WEBHOOK_URL is configured."}
+          {status.message || `We typically reply within one business day, or reach us directly at ${siteConfig.email}.`}
         </p>
       </div>
     </form>

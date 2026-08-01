@@ -1372,6 +1372,13 @@ html[data-stage="industries"] .experience { opacity: .86; filter: saturate(1.18)
   }
   .service-card__visual { min-height: 190px; }
   .capability-field__thread { width: 100vw; }
+
+  /* backdrop-filter forces the compositor to re-sample the live WebGL
+     background behind every card on each frame. Six stacked instances of
+     that over an actively-rendering canvas is a documented cause of scroll
+     jank on mobile GPUs. The card background is already near-opaque, so
+     dropping the blur here is not visually meaningful on small screens. */
+  .service-card { backdrop-filter: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -31,6 +31,7 @@ const fragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uStage;
   uniform float uEnergy;
+  uniform float uQuality;
   uniform vec2 uPointer;
   uniform vec3 uAccent;
   varying vec2 vUv;
@@ -74,14 +75,23 @@ const fragmentShader = /* glsl */ `
     float time = uTime * 0.065;
     vec2 flowUv = uv;
     float field = fbm(flowUv * (1.55 + uStage * 0.42) + vec2(time, -time * 0.72));
-    float secondaryField = fbm(flowUv * 2.4 - vec2(time * 0.65, time * 0.38));
-
     flowUv.y += (field - 0.5) * (0.16 + uEnergy * 0.09);
-    flowUv.x += (secondaryField - 0.5) * 0.055;
+
+    // uQuality is a coherent (non-divergent) uniform branch: every fragment
+    // in the draw takes the same path, so mobile GPUs skip this cheaply
+    // rather than computing and discarding it. The secondary noise field and
+    // third ribbon are the least visually load-bearing part of the effect,
+    // so this is where quality gets traded for fill-rate on small screens.
+    float secondaryField = 0.0;
+    float lineC = 0.0;
+    if (uQuality > 0.5) {
+      secondaryField = fbm(flowUv * 2.4 - vec2(time * 0.65, time * 0.38));
+      flowUv.x += (secondaryField - 0.5) * 0.055;
+      lineC = ribbon(flowUv, 1.1, 3.8, 0.23, 0.012);
+    }
 
     float lineA = ribbon(flowUv, -0.8, 4.9, 0.42, 0.022);
     float lineB = ribbon(flowUv, 0.15, 6.2, -0.31, 0.015);
-    float lineC = ribbon(flowUv, 1.1, 3.8, 0.23, 0.012);
 
     vec2 pointer = uPointer * vec2(1.72, 1.0);
     float pointerGlow = exp(-6.2 * length(uv - pointer));
@@ -104,9 +114,11 @@ const fragmentShader = /* glsl */ `
 export function SceneBackdrop({
   stage,
   industryAccent,
+  lowPower = false,
 }: {
   stage: ExperienceStage;
   industryAccent?: string;
+  lowPower?: boolean;
 }) {
   const material = useRef<ShaderMaterial>(null);
   const targetColour = useMemo(() => new Color(), []);
@@ -116,10 +128,11 @@ export function SceneBackdrop({
       uTime: { value: 0 },
       uStage: { value: stageValues.hero.value },
       uEnergy: { value: stageValues.hero.energy },
+      uQuality: { value: lowPower ? 0 : 1 },
       uPointer: { value: new Vector2() },
       uAccent: { value: new Color(stageValues.hero.accent) },
     }),
-    [],
+    [lowPower],
   );
 
   useFrame((state, delta) => {

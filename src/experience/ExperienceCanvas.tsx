@@ -2,7 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { AdaptiveDpr } from "@react-three/drei";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ExperienceStage } from "@/types/content";
 import { CameraRig } from "@/experience/CameraRig";
 import { LoomField } from "@/experience/LoomField";
@@ -49,6 +49,12 @@ export default function ExperienceCanvas() {
     };
   }, []);
 
+  // A phone's GPU fill-rate budget is spent mostly on the full-viewport
+  // backdrop shader; capping to 1x device pixels there (instead of 1.25x)
+  // is a ~36% cut in fragment-shader invocations with no visible difference
+  // on a small screen, versus a real one on a desktop monitor.
+  const maxDpr = useMemo(() => (typeof window !== "undefined" && window.innerWidth < 760 ? 1 : 1.25), []);
+
   if (supported !== true) {
     return <div className="canvas-fallback" aria-hidden="true"><span /><span /><span /></div>;
   }
@@ -56,7 +62,7 @@ export default function ExperienceCanvas() {
   return (
     <div className="experience" aria-hidden="true">
       <Canvas
-        dpr={[1, 1.25]}
+        dpr={[1, maxDpr]}
         frameloop={visible ? "always" : "never"}
         performance={{ min: 0.55 }}
         camera={{ position: [0, 0, 6.2], fov: 42, near: 0.1, far: 100 }}
@@ -68,7 +74,7 @@ export default function ExperienceCanvas() {
           powerPreference: "high-performance",
         }}
       >
-        <SceneBackdrop stage={stage} industryAccent={stage === "industries" ? industry.accent : undefined} />
+        <SceneBackdrop stage={stage} industryAccent={stage === "industries" ? industry.accent : undefined} lowPower={maxDpr === 1} />
         <ambientLight intensity={0.72} />
         <directionalLight position={[4, 5, 4]} intensity={1.4} color="#f7f6f2" />
         <pointLight position={[-3, -2, 3]} intensity={12} distance={11} color={industry.accent} />

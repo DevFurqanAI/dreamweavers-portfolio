@@ -1,0 +1,197 @@
+/* ==========================================================================
+   ICONS  —  Font Awesome 6 Free, purged
+   The source ships the complete ~140 KB all.css to render about two dozen
+   glyphs. This is the same stylesheet reduced to the rules those glyphs
+   need, plus the three woff2 files.
+
+   Font Awesome Free is licensed CC BY 4.0 (icons) / SIL OFL 1.1 (fonts) /
+   MIT (code) — safe to ship, attribution appreciated.
+   Icons used: fa-boxes-stacked, fa-brands, fa-briefcase, fa-cash-register, fa-chart-column, fa-clipboard-list, fa-code, fa-comment-dots, fa-envelope, fa-facebook, fa-instagram, fa-key, fa-linkedin, fa-lock, fa-mobile-screen, fa-phone, fa-plug, fa-robot, fa-shield-halved, fa-solid, fa-square-facebook, fa-star, fa-store, fa-twitter, fa-user, fa-users, fa-wand-magic-sparkles, fa-whatsapp
+   ========================================================================== */
+@font-face {
+  font-family: 'Font Awesome 6 Brands';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/webfonts/fa-brands-400.woff2") format("woff2"); }
+@font-face {
+  font-family: 'Font Awesome 6 Free';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/webfonts/fa-regular-400.woff2") format("woff2"); }
+@font-face {
+  font-family: 'Font Awesome 6 Free';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("/webfonts/fa-solid-900.woff2") format("woff2"); }
+@font-face {
+  font-family: "Font Awesome 5 Brands";
+  font-display: swap;
+  font-weight: 400;
+  src: url("/webfonts/fa-brands-400.woff2") format("woff2"); }
+@font-face {
+  font-family: "Font Awesome 5 Free";
+  font-display: swap;
+  font-weight: 900;
+  src: url("/webfonts/fa-solid-900.woff2") format("woff2"); }
+@font-face {
+  font-family: "Font Awesome 5 Free";
+  font-display: swap;
+  font-weight: 400;
+  src: url("/webfonts/fa-regular-400.woff2") format("woff2"); }
+@font-face {
+  font-family: "FontAwesome";
+  font-display: swap;
+  src: url("/webfonts/fa-solid-900.woff2") format("woff2"); }
+@font-face {
+  font-family: "FontAwesome";
+  font-display: swap;
+  src: url("/webfonts/fa-brands-400.woff2") format("woff2"); }
+@font-face {
+  font-family: "FontAwesome";
+  font-display: swap;
+  src: url("/webfonts/fa-regular-400.woff2") format("woff2");
+  unicode-range: U+F003,U+F006,U+F014,U+F016-F017,U+F01A-F01B,U+F01D,U+F022,U+F03E,U+F044,U+F046,U+F05C-F05D,U+F06E,U+F070,U+F087-F088,U+F08A,U+F094,U+F096-F097,U+F09D,U+F0A0,U+F0A2,U+F0A4-F0A7,U+F0C5,U+F0C7,U+F0E5-F0E6,U+F0EB,U+F0F6-F0F8,U+F10C,U+F114-F115,U+F118-F11A,U+F11C-F11D,U+F133,U+F147,U+F14E,U+F150-F152,U+F185-F186,U+F18E,U+F190-F192,U+F196,U+F1C1-F1C9,U+F1D9,U+F1DB,U+F1E3,U+F1EA,U+F1F7,U+F1F9,U+F20A,U+F247-F248,U+F24A,U+F24D,U+F255-F25B,U+F25D,U+F271-F274,U+F278,U+F27B,U+F28C,U+F28E,U+F29C,U+F2B5,U+F2B7,U+F2BA,U+F2BC,U+F2BE,U+F2C0-F2C1,U+F2C3,U+F2D0,U+F2D2,U+F2D4,U+F2DC; }
+/*!
+ * Font Awesome Free 6.1.2 by @fontawesome - https://fontawesome.com
+ * License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
+ * Copyright 2022 Fonticons, Inc.
+ */
+.fa{
+  font-family: var(--fa-style-family, "Font Awesome 6 Free");
+  font-weight: var(--fa-style, 900); }
+.fa,
+.fas,
+.fa-solid,
+.far,
+.fa-regular,
+.fal,
+.fa-light,
+.fat,
+.fa-thin,
+.fad,
+.fa-duotone,
+.fab,
+.fa-brands{
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: var(--fa-display, inline-block);
+  font-style: normal;
+  font-variant: normal;
+  line-height: 1;
+  text-rendering: auto; }
+.fa-1x{
+  font-size: 1em; }
+.fa-2x{
+  font-size: 2em; }
+.fa-3x{
+  font-size: 3em; }
+.fa-lg{
+  font-size: 1.25em;
+  line-height: 0.05em;
+  vertical-align: -0.075em; }
+.fa-fw{
+  text-align: center;
+  width: 1.25em; }
+.fa-boxes-stacked::before{
+  content: "\f468"; }
+.fa-briefcase::before{
+  content: "\f0b1"; }
+.fa-cash-register::before{
+  content: "\f788"; }
+.fa-chart-column::before{
+  content: "\e0e3"; }
+.fa-clipboard-list::before{
+  content: "\f46d"; }
+.fa-code::before{
+  content: "\f121"; }
+.fa-comment-dots::before{
+  content: "\f4ad"; }
+.fa-envelope::before{
+  content: "\f0e0"; }
+.fa-key::before{
+  content: "\f084"; }
+.fa-lock::before{
+  content: "\f023"; }
+.fa-mobile-screen::before{
+  content: "\f3cf"; }
+.fa-phone::before{
+  content: "\f095"; }
+.fa-plug::before{
+  content: "\f1e6"; }
+.fa-robot::before{
+  content: "\f544"; }
+.fa-shield-halved::before{
+  content: "\f3ed"; }
+.fa-star::before{
+  content: "\f005"; }
+.fa-store::before{
+  content: "\f54e"; }
+.fa-user::before{
+  content: "\f007"; }
+.fa-users::before{
+  content: "\f0c0"; }
+.fa-wand-magic-sparkles::before{
+  content: "\e2ca"; }
+.fab,
+.fa-brands{
+  font-family: 'Font Awesome 6 Brands';
+  font-weight: 400; }
+.fa-facebook:before{
+  content: "\f09a"; }
+.fa-instagram:before{
+  content: "\f16d"; }
+.fa-linkedin:before{
+  content: "\f08c"; }
+.fa-square-facebook:before{
+  content: "\f082"; }
+.fa-twitter:before{
+  content: "\f099"; }
+.fa-whatsapp:before{
+  content: "\f232"; }
+.far,
+.fa-regular{
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 400; }
+.fas,
+.fa-solid{
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900; }
+/* --------------------------------------------------------------------------
+   ADDED FOR THIS BUILD
+   The inherited icons.css was purged against the SOURCE site's markup, so it
+   carried only the ~20 glyphs that site happened to use. Dream Weavers'
+   services and social links need different ones, and they were rendering as
+   nothing at all. Codepoints come from the shipped Font Awesome metadata.
+   The woff2 files already contain every glyph; only the mapping was missing.
+   -------------------------------------------------------------------------- */
+.fa-bullhorn::before{
+  content: "\f0a1"; }
+.fa-chart-line::before{
+  content: "\f201"; }
+.fa-database::before{
+  content: "\f1c0"; }
+.fa-diagram-project::before{
+  content: "\f542"; }
+.fa-facebook-f::before{
+  content: "\f39e"; }
+.fa-filter::before{
+  content: "\f0b0"; }
+.fa-instagram::before{
+  content: "\f16d"; }
+.fa-laptop-code::before{
+  content: "\f5fc"; }
+.fa-linkedin-in::before{
+  content: "\f0e1"; }
+.fa-moon::before{
+  content: "\f186"; }
+.fa-shopify::before{
+  content: "\e057"; }
+.fa-sun::before{
+  content: "\f185"; }
+.fa-whatsapp::before{
+  content: "\f232"; }
+.fa-x-twitter::before{
+  content: "\e61b"; }

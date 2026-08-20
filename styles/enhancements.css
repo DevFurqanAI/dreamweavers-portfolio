@@ -1,0 +1,3120 @@
+/* ==========================================================================
+   ENHANCEMENTS
+   --------------------------------------------------------------------------
+   The one layer that is NOT the source's own CSS. It supplies, in ~200 lines,
+   what the source pulled in three libraries to do:
+
+     animate.css (~70 KB) + WOW.js (~8 KB)  ->  the .wow reveal block below
+     owl.carousel.css + owl.theme.default   ->  the .owl-carousel block below
+
+   Class names are unchanged, so the original markup is untouched and the
+   source's own rules (`.owl-theme .owl-dots .owl-dot span`, `.featured-work-box`,
+   …) still apply exactly as they did on the live site.
+
+   It also adds the four things the original is missing: a visible focus ring,
+   reduced-motion support, a theme-toggle control, and an outline-type
+   fallback for display faces that have no outline cut.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. SCROLL REVEAL  (replaces WOW.js + animate.css)
+   useReveal adds .is-armed on mount and .is-revealed at 15% visibility,
+   matching WOW's default offset. Durations/delays declared in the markup as
+   data-wow-duration / data-wow-delay are applied inline by Reveal.tsx.
+
+   REVEALS FAIL OPEN — AND THE HIDDEN STATE IS OPT-IN, NOT OPT-OUT.
+   A bare `.wow` paints exactly like unwrapped content. The pre-animation
+   hidden state below requires `.is-armed`, which only the client hook can add
+   and only once it has mounted and taken responsibility for that element. A
+   failed hydration, a missing bundle, a CSP that blocks the script, or an
+   exception before the effect runs all leave the element unarmed and
+   therefore visible. There is no media query, no `.no-js` bootstrap class and
+   no default-hidden rule to keep in sync — the fallback is the absence of
+   work. Do not reintroduce a hidden default.
+
+   `will-change` is scoped to the armed state, so the compositor hint is
+   released the moment an element reveals rather than carried for the page's
+   life.
+   ========================================================================== */
+.wow.is-armed:not(.is-revealed) {
+  opacity: 0;
+  will-change: opacity, transform;
+  /* Arming is a state reset, not an animation: the element is dropping out of
+     the visible state the server already painted. Transitioning that would
+     play the reveal backwards. Reveal.tsx sets transition-duration inline, so
+     the shorthand's `none` is carried by transition-property, which no inline
+     style overrides. */
+  transition: none;
+}
+.wow.is-armed.fadeInUp:not(.is-revealed) {
+  transform: translateY(40px);
+}
+.wow.is-armed.fadeInLeft:not(.is-revealed) {
+  transform: translateX(-40px);
+}
+.wow.is-armed.fadeInRight:not(.is-revealed) {
+  transform: translateX(40px);
+}
+
+/* The transition lives here, on the after-change style, which is what CSS
+   reads when deciding whether a class swap animates. `is-armed` is dropped in
+   the same commit that adds `is-revealed`. */
+.wow.is-revealed {
+  opacity: 1;
+  transform: none;
+  transition: opacity 1s var(--ease-out), transform 1s var(--ease-out);
+}
+
+/* ==========================================================================
+   2. CAROUSEL  (replaces Owl Carousel 2)
+   app.js builds the same DOM Owl builds — .owl-stage-outer > .owl-stage >
+   .owl-item, plus .owl-dots > .owl-dot > span — so every rule the source
+   wrote against those hooks keeps working.
+
+   Two behaviours, matching the source's own config in site.js:
+     #owl-hero-text, #owl-testimonial  ->  1 item, cross-fade
+     #featuredWork                     ->  3 items (1 under 1024px), fade
+   ========================================================================== */
+.owl-carousel {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.owl-carousel .owl-stage-outer {
+  position: relative;
+  overflow: hidden;
+}
+
+/* -- fade mode: all items stacked in one grid cell -- */
+.owl-carousel[data-owl-mode="fade"] .owl-stage {
+  display: grid;
+}
+.owl-carousel[data-owl-mode="fade"] .owl-item {
+  grid-area: 1 / 1;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 1s var(--ease-out), visibility 0s linear 1s;
+}
+.owl-carousel[data-owl-mode="fade"] .owl-item.active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 1s var(--ease-out), visibility 0s;
+}
+
+/* The hero headline carousel is inline inside an <h1>. */
+#owl-hero-text,
+#owl-hero-text .owl-stage-outer,
+#owl-hero-text .owl-stage,
+#owl-hero-text .owl-item {
+  display: block;
+}
+#owl-hero-text .owl-item {
+  grid-area: auto;
+}
+
+/* -- carousel of 3 (featured work) --
+   A native scroll-snap strip. The column count is declared HERE AND ONLY HERE;
+   Carousel.tsx measures the rendered geometry back rather than restating this
+   formula in JavaScript. The previous build translated the stage by a
+   hard-coded `100% / 3` in JS, which disagreed with the 100% column below on
+   every viewport under 1024px. Do not reintroduce a JS transform. */
+.owl-carousel[data-owl-mode="cards"] .owl-stage-outer {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  /* Dots are the visible affordance; a scrollbar under the cards would sit on
+     top of the lifted card edge. Touch/trackpad scrolling is unaffected. */
+  scrollbar-width: none;
+}
+.owl-carousel[data-owl-mode="cards"] .owl-stage-outer::-webkit-scrollbar {
+  display: none;
+}
+.owl-carousel[data-owl-mode="cards"] .owl-stage {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 2.5rem) / 3);
+  gap: 1.25rem;
+}
+.owl-carousel[data-owl-mode="cards"] .owl-item {
+  scroll-snap-align: start;
+}
+@media (max-width: 1024px) {
+  .owl-carousel[data-owl-mode="cards"] .owl-stage {
+    grid-auto-columns: 100%;
+  }
+}
+
+/* -- dots: the source styles the inner <span>, so reproduce Owl's DOM -- */
+.owl-theme .owl-dots {
+  text-align: center;
+  padding-top: 0.625rem;
+  line-height: 1;
+}
+.owl-theme .owl-dots .owl-dot {
+  display: inline-block;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  /* WCAG 2.2 SC 2.5.8, Target Size (Minimum). The button itself declared no
+     size, so it inherited the dot's 10px plus a 5px vertical margin — a 20px
+     tall target, under the 24px floor. */
+  min-width: 24px;
+  min-height: 24px;
+}
+.owl-theme .owl-dots .owl-dot span {
+  display: block;
+  width: 10px;
+  height: 10px;
+  /* 7px on all four sides makes the target 24x24 while leaving the horizontal
+     rhythm exactly as it was; only the vertical margin changed (5px -> 7px).
+     The visible dot stays 10px. */
+  margin: 7px;
+  border-radius: 30px;
+  transition: opacity 0.2s ease;
+}
+
+/* ==========================================================================
+   3. OUTLINE-TYPE FALLBACK
+   If you replace Gilmer with a family that has no outline cut, delete the
+   --font-outline declaration in tokens.css and this rule takes over.
+   ========================================================================== */
+@supports (-webkit-text-stroke: 1px black) {
+  .u-outline-fallback {
+    color: transparent;
+    -webkit-text-stroke: 1.5px currentColor;
+    paint-order: stroke fill;
+  }
+}
+
+/* ==========================================================================
+   5. ACCESSIBILITY
+   The source removes outlines in several places and replaces them with
+   nothing. These restore a visible focus ring for keyboard users only, and
+   add the skip link the site has no equivalent of.
+   ========================================================================== */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100000;
+  padding: 0.625rem 1.25rem;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The mega menu must be unreachable by keyboard and AT while closed.
+   theme.css sets `transition: all 0.3s` on the panel, and visibility IS a
+   transitionable property — so a plain visibility flip does not take effect
+   until the transition ends, and focus moved into the panel on open landed
+   on a still-hidden element and was silently dropped.
+   Same delayed-visibility pattern as the carousel above: instant on open,
+   deferred on close so the slide-out stays visible while it animates. */
+.mega-menu {
+  visibility: hidden;
+  transition: transform var(--dur-base) var(--ease-out), visibility 0s linear var(--dur-base);
+}
+.menu-open .mega-menu {
+  visibility: visible;
+  transition: transform var(--dur-base) var(--ease-out), visibility 0s;
+}
+
+/* The hero scroll cue. Was an SVG SMIL <animate repeatCount="indefinite">,
+   which no media query can stop — SMIL is outside CSS's reach, so the cue ran
+   forever even under prefers-reduced-motion. `height` is an SVG2 geometry
+   property and therefore animatable from CSS, which puts it back under §6.
+   With the animation suppressed the rect falls back to its height="40"
+   attribute and reads as a static icon. */
+.scroll-cue-bar {
+  animation: scroll-cue-pulse 3s var(--ease-out) infinite;
+}
+@keyframes scroll-cue-pulse {
+  from {
+    height: 40px;
+  }
+  to {
+    height: 20px;
+  }
+}
+
+/* ==========================================================================
+   6. REDUCED MOTION
+   The source honours no motion preference at all — the marquee, the floating
+   planet and the carousels run regardless. This is a correctness fix, not a
+   preference.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Explicit, not merely covered by the wildcard above: this one replaced a
+     SMIL animation specifically so that it could be stopped here. */
+  .scroll-cue-bar {
+    animation: none !important;
+  }
+  .wow {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .marquee-inner {
+    animation: none !important;
+    transform: none !important;
+  }
+  .obj-planet {
+    animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   7. PURGE PATCH
+   `.max-para` is styled in the source only under a `.section-our-team`
+   ancestor that no mirrored page contains, so the purge correctly dropped
+   it — but the class IS used in the markup. Restored standalone.
+   ========================================================================== */
+p.max-para {
+  max-width: 56.25rem;
+  margin-bottom: 7.5rem;
+}
+
+/* ==========================================================================
+   8. REVEALS MUST FAIL OPEN — see §1.
+   Intentionally empty. There is no fallback rule here because the hidden
+   pre-animation state in §1 is gated on `.is-armed`, which only the mounted
+   client hook applies. Nothing needs undoing when the client never runs.
+   ========================================================================== */
+
+/* ==========================================================================
+   10. TAB RAIL
+   The About page's vertical rail. The source design has no equivalent
+   markup, so this is authored rather than ported.
+   ========================================================================== */
+.tab-rail {
+  display: grid;
+  gap: 3rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 992px) {
+  .tab-rail {
+    grid-template-columns: minmax(16rem, 22rem) 1fr;
+    gap: 5rem;
+  }
+}
+.tab-rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  /* On the dark band, NOT the light-surface hairline — see tokens.css. */
+  border-inline-start: 1px solid var(--line-dark);
+  /* The rail measures the tabs, not the panel beside them.
+     A grid item stretches to its row by default, so this border ran the full
+     height of whichever panel was open — 40px of bare line hanging past the
+     last tab at 1440px, and, worse, a line whose LENGTH CHANGED every time
+     the user switched tab, because Mission, Vision and Values are different
+     heights. The rule appeared to be measuring the body copy. */
+  align-self: start;
+}
+.tab-rail-tab {
+  appearance: none;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: start;
+  padding: 1rem 1.5rem;
+  color: inherit;
+  color: var(--fg-muted-dark);
+  font: 500 var(--step-1) / 1.2 var(--font-display);
+  letter-spacing: var(--tracking-display);
+  position: relative;
+  /* `color`, not `opacity`: opacity never changed here, so the hover snapped
+     instead of easing. Muting type with opacity is banned anyway (tokens.css
+     §2) — it drops contrast below AA. */
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.tab-rail-tab::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -1px;
+  width: 2px;
+  /* --accent is the LIGHT-surface accent: on this band it is 3.29:1, dimmer
+     than the muted labels it is meant to mark. --accent-soft is the on-dark
+     member of the same family, at 9.50:1.
+
+     This carries the selected state on its own, in a channel hover does not
+     use. Hover brightens the LABEL, selection lights the BAR — so a hovered
+     tab is never mistaken for the selected one. */
+  background: var(--accent-soft);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+/* THE RAIL SITS ON --surface-dark. It hovered to --c-black (#202020), which
+   is 1.07:1 against that band — the label did not darken, it disappeared.
+   This is the light-surface hover rule applied to a dark section. On dark the
+   direction is up, not down: muted (8.39:1) brightens to white (17.42:1),
+   which is the colour .section-dark already sets for its own type. */
+.tab-rail-tab:hover {
+  color: var(--c-white);
+}
+/* The selected tab was marked ONLY by the 2px accent bar; `opacity: 1` was a
+   no-op, because nothing set it below 1. Its label now carries the selection
+   too, so the state does not rest on a single 2px cue. */
+.tab-rail-tab.active {
+  color: var(--c-white);
+}
+.tab-rail-tab.active::before {
+  transform: scaleY(1);
+}
+.tab-rail-panel[hidden] {
+  display: none;
+}
+.tab-rail-panel:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 6px;
+}
+
+/* ==========================================================================
+   11. ACCORDION PANEL
+   Animates real height with `grid-template-rows: 0fr -> 1fr`. The panel used
+   to toggle `hidden` (display:none), which cannot transition — it snapped
+   open and then faded, which read as a stutter.
+
+   This needs no measured pixel height, survives content of any length, and
+   degrades to an instant open under reduced motion.
+   ========================================================================== */
+.accordion-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease-out);
+}
+.accordion-item[data-open='true'] > .accordion-panel {
+  grid-template-rows: 1fr;
+}
+.accordion-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+/* The body fades slightly behind the height so the reveal does not feel
+   like a curtain snapping up. */
+.accordion-panel .card-body {
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out) 0.08s;
+}
+.accordion-item[data-open='true'] .card-body {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .accordion-panel,
+  .accordion-panel .card-body {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   12. TEAM GRID
+   The client's team photos arrive at mixed aspect ratios (1:1 and 2:3), so
+   a fixed ratio box plus object-fit keeps the grid even without distorting
+   anyone's face.
+   ========================================================================== */
+.team-card-photo {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--surface-alt);
+}
+.team-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+/* ==========================================================================
+   13. MARQUEE VIEWPORT BLEED
+   The marquee row is `width: 100vw` so it bleeds past its container. But
+   100vw includes the scrollbar gutter while the document's client width does
+   not, so whenever a vertical scrollbar is present the page gains a sliver of
+   horizontal scroll exactly one scrollbar wide.
+
+   `clip` rather than `hidden`: it contains the bleed without turning the
+   section into a scroll container.
+   ========================================================================== */
+.section-marquee {
+  overflow-x: clip;
+}
+
+/* ==========================================================================
+   14. DECORATIVE GLOW SHAPES
+   .section-process::before is a purely decorative background shape sized in
+   rem (40.9375rem). Because the root scale shrinks on small viewports but
+   the section is bounded by the viewport, the shape ends up WIDER than its
+   section and adds a sliver of horizontal page scroll — 327.5px inside a
+   320px section.
+
+   `clip` rather than `hidden`: it contains the shape without turning the
+   section into a scroll container, and the shape is a soft glow whose edge
+   is not meant to be seen anyway.
+   ========================================================================== */
+.section-process {
+  overflow-x: clip;
+}
+
+/* ==========================================================================
+   15. INTERIOR PAGE LAYOUT
+   The source design has no About/Team equivalents, so these are authored.
+   ========================================================================== */
+/* The header is absolutely positioned, so a page hero's own top padding is
+   the only thing clearing it. 16rem (216px) cleared a 118px header by nearly
+   a whole header again — and every one of these sections also carries
+   `.section-margin`, whose 8.75rem top margin stacked on top. Interior pages
+   opened with ~257px of empty band before their first word.
+
+   The two must not both pay for the clearance, so the padding keeps the job
+   and the margin is dropped here. Bottom margin is untouched: that one is
+   real spacing to whatever follows. */
+.page-hero {
+  padding-top: 12rem;
+}
+.page-hero.section-margin {
+  margin-top: 0;
+}
+.page-hero .max-para {
+  margin-bottom: 0;
+}
+
+/* --- the figured masthead ------------------------------------------------
+   Interior index pages opened with a title and one line on flat white, which
+   read as undesigned beside a home page that layers a starfield, a brand glow
+   and a drifting planet behind its headline. Same three layers here, at the
+   scale of a short band: the home hero keeps 100vh, its illustration and its
+   scroll cue, so it stays the loudest thing on the site.
+   ---------------------------------------------------------------------- */
+.page-hero--figured {
+  position: relative;
+  isolation: isolate;
+  /* `clip` not `hidden`: the latter would make this a scroll container and
+     break `position: sticky` for anything that lands inside later. */
+  overflow: clip;
+  /* `svh` not `vh`: on mobile `vh` resolves to the LARGEST viewport, so a
+     100vh band is taller than the screen while the browser chrome is showing
+     and the copy sits partly under it.
+     Only `.container` is in flow here — backdrop and planet are absolute.
+
+     58svh, NOT the full 100svh this used to be. An interior masthead carries a
+     kicker, a title and one line — measured at 1440x900 that is 183px of
+     content in a 900px band, so /about/, /team/ and /contact/ were 20% full and
+     the visitor met a title and then a screen of starfield before anything
+     else. /services/ and /portfolio/ carry more and still only reached 36%.
+     At 58svh the sparse pages sit at ~35% and the richer ones at ~63%, and the
+     section below the hero starts above the fold on a laptop.
+
+     It stays a MINIMUM: a hero whose content outgrows the band still expands.
+     The home hero keeps its full 100vh, its illustration and its scroll cue, so
+     it remains the loudest thing on the site — which was the point of the
+     figured masthead being smaller in the first place. */
+  display: flex;
+  align-items: center;
+  min-height: var(--page-hero-min, 58svh);
+}
+.page-hero--figured > .container {
+  width: 100%;
+}
+/* The fade lives on the PARENT, not on the starfield alone. `overflow: clip`
+   on the section cuts every layer at the band's bottom edge, and the glow is
+   a 55rem circle — clipped, it ended in a hard horizontal line across the
+   page. Masking the whole backdrop dissolves both layers together. */
+.page-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+}
+.page-hero-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: -10% -5% 0;
+  background: url('/img/animation-background-stars.svg') no-repeat top center;
+  background-size: cover;
+  opacity: 0.55;
+  animation: hero-stars-drift 32s var(--ease-out) infinite alternate;
+}
+/* The brand glow, top right, as on the home hero. */
+.page-hero-backdrop::after {
+  content: '';
+  position: absolute;
+  top: -45%;
+  right: -12%;
+  width: 55rem;
+  height: 55rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--accent) 14%, transparent) 0%,
+    transparent 62%
+  );
+}
+/* Slow enough to be felt rather than watched. */
+@keyframes hero-stars-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-1.5%, 1.2%, 0);
+  }
+}
+
+.page-hero-grid {
+  display: grid;
+  gap: 3rem;
+  align-items: center;
+}
+@media (min-width: 992px) {
+  .page-hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 3rem 5rem;
+  }
+}
+
+/* --- the hero jump list --------------------------------------------------
+   A full-height band needs something in its second column, and on an index
+   page the most useful thing is the index itself. Two columns of hairline
+   rows rather than cards: this is a contents list, and it must not compete
+   with the real cards further down the page.
+   ---------------------------------------------------------------------- */
+.hero-index-head {
+  margin: 0 0 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--fg);
+  font-size: var(--step--1);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.hero-index ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+@media (min-width: 576px) {
+  .hero-index ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 2.5rem;
+  }
+}
+.hero-index li {
+  border-bottom: 1px solid var(--line);
+}
+.hero-index a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.2rem 0;
+  color: var(--fg);
+  text-decoration: none;
+  font-size: var(--step--1);
+  transition: color var(--dur-fast) var(--ease-out),
+    padding-left var(--dur-fast) var(--ease-out);
+}
+/* Optional — the portfolio index has no per-item icon, so its rows sit flush
+   rather than reserving an empty gutter. */
+.hero-index-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.75rem;
+  font-size: max(13px, 1.1rem);
+  color: var(--accent);
+}
+.hero-index-label {
+  min-width: 0;
+}
+.hero-index a:hover,
+.hero-index a:focus-visible {
+  color: var(--accent);
+  padding-left: 0.5rem;
+  text-decoration: none;
+}
+
+.page-hero-kicker {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  font-size: var(--step--1);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.page-hero-kicker-rule {
+  display: block;
+  width: 2.75rem;
+  height: 2px;
+  flex: none;
+  background: var(--accent);
+}
+.page-hero--figured .page-hero-lead {
+  font-size: var(--step-1);
+  line-height: var(--leading-snug);
+  color: var(--fg-muted);
+  margin-top: 1.5rem;
+}
+.page-hero-action {
+  margin-top: 3rem;
+}
+/* The home hero parks this bottom-right of a 100vh band. In a short band it
+   needs to sit off the copy, and quieter — it is scenery, not an object. */
+.page-hero--figured .obj-planet {
+  position: absolute;
+  right: 4rem;
+  bottom: -2rem;
+  z-index: -1;
+  width: 7rem;
+  height: auto;
+  opacity: 0.16;
+  animation: float 6s ease-in-out infinite;
+}
+@media (max-width: 991px) {
+  .page-hero--figured .obj-planet {
+    right: 1.5rem;
+    width: 5rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-hero-backdrop::before {
+    animation: none;
+  }
+}
+@media (max-width: 767px) {
+  /* HIGHER in rem than the desktop figure, not lower. The root scale falls to
+     ~8px here while the header only falls 118px -> 80px, so a rem value tuned
+     at 1440 lands the first line inside the header. 14rem is ~113px. */
+  .page-hero {
+    padding-top: 14rem;
+  }
+  /* No minimum on a phone. The padding alone already makes the band a third
+     of the screen, and a 72svh floor on top of it just centres the title in
+     an empty column. */
+  .page-hero--figured {
+    min-height: 0;
+  }
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 3rem 2.5rem;
+  margin-bottom: 5rem;
+}
+/* Stagger every second card so the grid does not read as a plain table. */
+@media (min-width: 992px) {
+  .team-grid > *:nth-child(even) {
+    transform: translateY(3rem);
+  }
+}
+.team-card-name {
+  margin: 1.5rem 0 0.25rem;
+}
+.team-card-role {
+  color: var(--fg-muted);
+  margin: 0;
+}
+
+/* --- profile links on a team card --------------------------------------
+   Absent for anyone with nothing listed: SocialLinks renders no element at
+   all, so there is no empty row to collapse and no margin to cancel. */
+.social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  /* Pulls the 44px targets back into line with the name and role above,
+     which have no such padding. */
+  margin-inline-start: -0.625rem;
+}
+.social-links a {
+  display: grid;
+  place-items: center;
+  /* 44x44, comfortably past the WCAG 2.2 24x24 minimum. These are small
+     glyphs and a near-miss on a phone is the whole failure mode. */
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: 50%;
+  color: var(--fg-muted);
+  font-size: max(13px, 1rem);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.social-links a:hover {
+  color: var(--c-white);
+  background: var(--accent);
+}
+/* On the dark band the resting colour has to invert with the surface. */
+.section-dark .social-links a {
+  color: var(--fg-muted-dark);
+}
+.section-dark .social-links a:hover {
+  color: var(--c-white);
+  background: var(--accent-deep);
+}
+
+.industries-list,
+.values-list {
+  list-style: none;
+  padding: 0;
+}
+.industries-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 4rem;
+}
+.industries-list li {
+  border: 1px solid var(--line);
+  border-radius: 35px;
+  padding: 0.75rem 1.75rem;
+  font-size: var(--step-0);
+}
+.values-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid color-mix(in oklch, currentColor 15%, transparent);
+}
+.values-list li:last-child {
+  border-bottom: 0;
+}
+
+.section-about-tabs {
+  padding-block: 7.5rem;
+}
+
+/* ==========================================================================
+   16. SERVICE + PROJECT DETAIL
+   ========================================================================== */
+/* The breadcrumb is the only route back to a listing that does not go through
+   the mega-menu, and it rendered as one muted 14px line with an underlined
+   word in it — indistinguishable from a caption. The parent link now carries
+   the shape of a control and names its destination; the current page stays
+   quiet text beside it. */
+.breadcrumb-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 2.25rem;
+  font-size: var(--step--1);
+  color: var(--fg-muted);
+}
+.breadcrumb-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+  padding: 0.6rem 1.35rem 0.6rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 35px;
+  background: var(--c-white);
+  color: var(--fg);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+  /* theme.css underlines `a:hover` sitewide; inside a pill that reads as a
+     rendering fault rather than as an affordance. */
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.breadcrumb-back-arrow {
+  display: inline-block;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.breadcrumb-back:hover,
+.breadcrumb-back:focus-visible {
+  text-decoration: none;
+  color: var(--accent);
+  background: var(--accent-tint);
+  border-color: color-mix(in oklch, var(--accent) 40%, transparent);
+}
+/* The arrow backs out of the pill, which is the direction the link goes. */
+.breadcrumb-back:hover .breadcrumb-back-arrow,
+.breadcrumb-back:focus-visible .breadcrumb-back-arrow {
+  transform: translateX(-3px);
+}
+.breadcrumb-sep {
+  color: color-mix(in oklch, var(--fg-muted) 45%, transparent);
+}
+.breadcrumb-current {
+  color: var(--fg-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .breadcrumb-back-arrow {
+    transition: none;
+  }
+}
+.service-hero-img,
+.project-hero-img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+/* Same story as the listing cards: this is a client logo, not a photograph,
+   and at full container width it rendered ~900px across. Framed and capped,
+   `contain` so nothing is cropped. */
+.project-hero-img {
+  max-width: 40rem;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: var(--c-white);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 2.5rem;
+  margin-bottom: 4rem;
+}
+.project-lead {
+  font-size: var(--step-1);
+  line-height: var(--leading-snug);
+  color: var(--fg-muted);
+  max-width: 40ch;
+  margin: 1.5rem 0 0;
+}
+.section-included {
+  padding-block: 7.5rem;
+}
+.faq-list {
+  max-width: 60rem;
+}
+.service-next {
+  margin-top: 2rem;
+  font-size: var(--step--1);
+  color: var(--fg-muted);
+}
+.case-study-pending {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 2.5rem;
+  background: var(--surface-alt);
+  max-width: var(--measure);
+}
+
+/* ==========================================================================
+   17. PORTFOLIO
+   ========================================================================== */
+.filter-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 4rem;
+}
+.filter-rail-btn {
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  border-radius: 35px;
+  padding: 0.75rem 1.75rem;
+  font: 500 var(--step--1) / 1 var(--font-body);
+  transition: background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.filter-rail-btn:hover {
+  border-color: var(--accent);
+}
+.filter-rail-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  /* Teal is dark — white type, never black. */
+  color: #fff;
+}
+
+.work-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 3.5rem 2.5rem;
+}
+.work-card[hidden] {
+  display: none;
+}
+/* Equal-height cards. Titles run to one or two lines, so without this the
+   summary and meta sat at a different height in every column and each row
+   ended ragged. */
+.work-card > a {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+/* CONTAIN, not cover. Nine of the ten thumbnails are client logos, and cover
+   drew a 500x500 mark 337px tall inside a 253px box — 84px, a full 25% of
+   every image, cropped off the top and bottom. Circular marks lost their
+   edges. `cover` is right for photography and wrong for a logo.
+   The plate is white with a hairline rather than tinted: most of these marks
+   carry their own baked-in white background, which covered a tinted plate
+   completely, so only the one real photograph read as a card at all. */
+.work-card-media {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 15px;
+  background: var(--c-white);
+  border: 1px solid var(--line);
+  padding: 1.75rem;
+  display: grid;
+  place-items: center;
+  transition: border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+.work-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* The hover was `scale(1.04)` on the image, which pushed an already-cropped
+   logo further outside its own frame. The card responds instead. */
+.work-card:hover .work-card-media {
+  border-color: color-mix(in oklch, var(--accent) 40%, transparent);
+  box-shadow: var(--shadow-md);
+}
+.work-card-title {
+  margin: 1.5rem 0 0.5rem;
+}
+.work-card:hover .work-card-title {
+  color: var(--accent);
+}
+.work-card-summary {
+  color: var(--fg-muted);
+  margin: 0 0 0.75rem;
+  /* Pushes the meta line to the bottom of every card in the row. */
+  flex: 1;
+}
+.work-card-meta {
+  color: var(--fg-muted);
+  font-size: var(--step--1);
+  margin: 0;
+}
+
+/* Follows the cursor. pointer-events:none so it never blocks the link
+   underneath; suppressed entirely on coarse pointers by useCursorPreview. */
+.cursor-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-tooltip);
+  pointer-events: none;
+  width: 34rem;
+  max-width: 40vw;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+.cursor-preview img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor-preview {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   47. CLIENT LOGO WALL
+   The tech-stack row (§28), applied to client marks: full brand colour at
+   rest, no frame, a tinted plate that scales in on hover, and `contain` so
+   nothing is cropped. The one addition these need is `mix-blend-mode` on the
+   image, because unlike the stack's SVGs these are opaque WebP — see below.
+   ========================================================================== */
+/* Centred flex, not a fixed grid. A wall holds however many clients there
+   are — nine today — so any fixed column count leaves a part-filled last row
+   hanging to the left. Centring makes the remainder read as deliberate at
+   every count, which a grid cannot do. */
+.client-logo-list {
+  list-style: none;
+  margin: 5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+}
+.client-logo {
+  flex: 0 0 auto;
+  /* Widths are derived from the row count, not guessed in rem. For n tiles
+     per row with gap g the width is `100%/n - g*(n-1)/n`, which is exact at
+     any root size — a fixed 15rem overflowed the container by 10px at a
+     13.5px root and silently dropped the wall to 4 / 4 / 1. Two per row here,
+     widened at each breakpoint below. */
+  width: calc(50% - 0.75rem);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  padding: 1.75rem 1.5rem;
+  border-radius: 16px;
+}
+/* Identical to the tech-stack row (§28): no frame at rest, and the hover is a
+   tinted plate that scales in behind the mark — a surface appearing rather
+   than the logo changing. Only opacity and transform animate, so the effect
+   stays off the layout path. */
+.client-logo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: color-mix(in oklch, var(--accent) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 20%, transparent);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+.client-logo:hover::before {
+  opacity: 1;
+  transform: none;
+}
+.client-logo img {
+  /* The tech-stack marks are transparent SVGs; these are WebP with the white
+     baked in, which would sit ON TOP of the plate and hide it — the tint
+     would only ever show in the padding ring. `multiply` drops the white to
+     the backdrop, so the plate reads through the mark exactly as it does for
+     the SVGs, and the coloured artwork is unaffected. */
+  mix-blend-mode: multiply;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.client-logo:hover img {
+  transform: scale(1.07);
+}
+@media (prefers-reduced-motion: reduce) {
+  .client-logo::before,
+  .client-logo img {
+    transition: none;
+  }
+  .client-logo:hover img {
+    transform: none;
+  }
+}
+/* These MUST follow the base rule: they carry the same specificity, so when
+   they sat above it the unconditional `width` below won at every breakpoint
+   and every tile took a row of its own. */
+/* 3 per row: 100%/3 - 1.5rem*2/3 */
+@media (min-width: 576px) {
+  .client-logo {
+    width: calc(33.3333% - 1rem);
+  }
+}
+/* 5 per row: 100%/5 - 2rem*4/5 */
+@media (min-width: 992px) {
+  .client-logo-list {
+    gap: 2rem;
+  }
+  .client-logo {
+    width: calc(20% - 1.6rem);
+  }
+}
+/* Tall for a logo row, because these sources are square and already carry
+   their own internal whitespace — `contain` fits them by height, so a short
+   box renders a small mark stranded in a wide tile. */
+.client-logo img {
+  width: 100%;
+  height: 9rem;
+  object-fit: contain;
+}
+@media (max-width: 767px) {
+  .client-logo-list {
+    margin-top: 3.5rem;
+  }
+  .client-logo img {
+    height: 5rem;
+  }
+}
+
+.project-meta {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 2rem 0 0;
+}
+.project-meta li {
+  border: 1px solid var(--line);
+  border-radius: 35px;
+  padding: 0.5rem 1.5rem;
+  font-size: var(--step--1);
+}
+
+.project-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: 3rem;
+}
+.project-pager a {
+  display: grid;
+  gap: 0.35rem;
+}
+.project-pager span {
+  font-size: var(--step--1);
+  color: var(--fg-muted);
+}
+.project-pager-next {
+  text-align: end;
+}
+
+/* ==========================================================================
+   18. CONTACT
+   ========================================================================== */
+.section-contact-channels {
+  padding-block: 7.5rem;
+}
+.contact-channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+.contact-channel {
+  display: grid;
+  gap: 0.35rem;
+  padding: 2.5rem;
+  border: 1px solid color-mix(in oklch, currentColor 20%, transparent);
+  border-radius: 10px;
+  transition: border-color var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+.contact-channel:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+}
+.contact-channel i {
+  font-size: max(19px, 2rem);
+  margin-bottom: 1rem;
+  color: var(--accent);
+}
+.contact-channel--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  /* Teal is dark: white type, never black. */
+  color: #fff;
+}
+.contact-channel--primary i {
+  color: #fff;
+}
+.contact-channel--primary:hover {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+}
+.contact-channel-label {
+  font-size: var(--step-0);
+  color: var(--fg-muted);
+}
+.contact-channel-value {
+  font: 600 var(--step-1) / 1.2 var(--font-display);
+  letter-spacing: var(--tracking-display);
+  word-break: break-word;
+}
+.contact-channel-note {
+  font-size: var(--step-0);
+  color: var(--fg-muted);
+}
+
+.office-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2.5rem;
+  margin-bottom: 5rem;
+}
+.office-card {
+  font-style: normal;
+  border-top: 2px solid var(--accent);
+  padding-top: 1.5rem;
+}
+.contact-social-heading {
+  margin-bottom: 1.5rem;
+}
+.contact-social {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+.contact-social i {
+  color: var(--accent);
+  margin-right: 0.5rem;
+}
+
+/* On the brand fill, type must stay pure white: teal is dark enough that any
+   tint or alpha drops below 4.5:1 (measured 3.51:1 and 3.02:1 before this).
+   Hierarchy comes from weight and size, not from muting. */
+.contact-channel--primary .contact-channel-label,
+.contact-channel--primary .contact-channel-note,
+.contact-channel--primary .contact-channel-value {
+  color: #fff;
+}
+.contact-channel--primary .contact-channel-note {
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   19. BRAND-FILL FOREGROUNDS (children too)
+   `.card-mini.primary { color: #fff }` is not enough: its h4 and p carry
+   their own colour from the ported stylesheet, so the ink stayed #202020 on
+   #417284 — measured 3.07:1. The fill must own every descendant's colour.
+   ========================================================================== */
+.card-mini.primary,
+.card-mini.primary h1,
+.card-mini.primary h2,
+.card-mini.primary h3,
+.card-mini.primary h4,
+.card-mini.primary h5,
+.card-mini.primary h6,
+.card-mini.primary p,
+.card-mini.primary li,
+.card-mini.primary span,
+.card-mini.primary strong,
+.card-mini.primary .card-mini-heading {
+  color: #fff;
+}
+
+/* ==========================================================================
+   20. LINKS INSIDE TEXT BLOCKS
+   WCAG 1.4.1: a link sitting in a run of text must be distinguishable by
+   something other than colour alone. Standalone nav links are exempt; these
+   are the ones that sit inline.
+
+   `.breadcrumb-nav a` is NOT in this list: it is the sole control in its own
+   <nav>, and §16 gives it a border, a fill, a shadow and an arrow — four
+   non-colour cues. An underline on top of a pill just looked like a mistake.
+   ========================================================================== */
+.case-study-pending a,
+.service-next a,
+.section-project-body a,
+.section-service-body a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* theme.css sets `.section-dark .card-mini.primary p { color: var(--c-black) }`
+   at specificity (0,3,1) — the source's amber assumption once more, since its
+   brand colour was light enough for black type. Teal is not: measured 3.07:1.
+   Matching that specificity so the white foreground wins. */
+.section-dark .card-mini.primary,
+.section-dark .card-mini.primary p,
+.section-dark .card-mini.primary h4,
+.section-dark .card-mini.primary .card-mini-heading {
+  color: #fff;
+}
+
+/* ==========================================================================
+   22. HERO BACKDROP + IDENTITY SIZING FIXES
+   The source's starfield SVG was drawn for its darker hero treatment. On the
+   white surface Dream Weavers uses, the marks read as stray debris rather
+   than atmosphere, so the hero keeps only the soft gradient wash.
+   ========================================================================== */
+
+/* ==========================================================================
+   23. SERVICE CARD — LONG TITLES
+   The design pins the title to the bottom of the card with a fixed
+   `padding-top: 6.5rem` inside an `overflow: hidden` box of fixed height.
+   That assumes a two-line title. "Database Management & Administration" runs
+   to three lines and was clipped straight through the card border.
+
+   Flex puts the title at the bottom by measurement rather than by guess, so
+   it holds for any title length. `margin-top: auto` replaces the fixed pad.
+   ========================================================================== */
+.section-our-services .service-box-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 24rem;
+}
+/* Content flows from the TOP. The reference pins the title to the bottom,
+   which works when the card grows on hover — but growing means animating
+   height, and that is what made the interaction stutter. With the
+   description's space reserved instead, a bottom-pinned title left the card
+   looking unbalanced at rest: title floating mid-box with dead space under
+   it. Top-aligned reads as deliberate, and the description fills the room
+   it leaves. */
+.section-our-services .service-box-heading {
+  margin: 0 0 1.25rem;
+  padding-top: 1.5rem;
+  text-wrap: balance;
+  /* theme.css sets `font: 700 ... var(--font-heavy)`. Clash Display at 700 is
+     already a heavy cut, and at 25px inside a small card it read louder than
+     the section's own h2. 500 keeps the display face and the size — it is the
+     weight that was shouting, not the type. */
+  font-weight: 500;
+}
+.section-our-services .service-box-icon {
+  flex: none;
+}
+
+/* ==========================================================================
+   24. FOOTER SOCIAL ROW
+   The source had no equivalent markup, so the <ul> fell back to default list
+   styling — visible bullets, stacked vertically.
+   ========================================================================== */
+.footer-social ul {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: flex;
+  gap: 1.25rem;
+}
+.footer-social a {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  transition: background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.footer-social a:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* The mega menu's social list is inline-with-label, so only the bullets go. */
+.mega-menu-sub-nav ul {
+  list-style: none;
+  padding: 0;
+}
+
+/* ==========================================================================
+   25. MARQUEE OUTLINE TYPE
+   Two faults, both from --font-outline being deliberately undefined (Clash
+   Display has no outline cut, so §3's -webkit-text-stroke fallback is meant
+   to take over):
+
+   1. `.section-marquee-item .marquee-inner > div .marquee-text` sets
+      `color: inherit` at specificity (0,4,0), which beat `.u-outline-fallback`
+      at (0,1,0). The band rendered as a wall of SOLID black instead of
+      outline type.
+   2. The source sized this at 9.5rem to suit an outline cut, whose visual
+      weight is far lighter than a filled face. At that size a stroked face
+      reads as shouting.
+   ========================================================================== */
+.section-marquee-item {
+  /* The reference sets 9.5rem. Restored: at the smaller size the band stopped
+     reading as a marquee. Short uppercase words keep it legible. */
+  font-size: 9.5rem;
+}
+@supports (-webkit-text-stroke: 1px black) {
+  .section-marquee-item .marquee-inner > div .marquee-text {
+    color: transparent;
+    /* Thin on purpose. Outline type at this scale is a texture, not a
+       headline — thickening the stroke turns the band into a heavy block
+       that competes with the sections either side of it. */
+    -webkit-text-stroke: 1.5px var(--c-black);
+    paint-order: stroke fill;
+  }
+}
+/* The solid brand copy revealed on hover keeps its fill. */
+.section-marquee-item .marquee-inner > div .marquee-text-hover {
+  color: var(--accent);
+  -webkit-text-stroke: 0;
+}
+
+@media (max-width: 767px) {
+  .section-marquee-item {
+    font-size: 4.5rem;
+  }
+}
+
+/* ==========================================================================
+   26. TESTIMONIAL SLAB FOREGROUND
+   The slab is filled with the brand colour, and theme.css colours the quote
+   and client name with --c-black — the source's amber assumption once more.
+   Teal is dark: the quote only cleared axe because large bold text has a 3:1
+   threshold, and it read as muddy regardless.
+   ========================================================================== */
+.section-testimonial .owl-testimonial-article,
+.section-testimonial .owl-testimonial-article p,
+.section-testimonial .owl-testimonial-client-name {
+  color: #fff;
+}
+/* The placeholder note sits inside the slab rather than floating above it. */
+.testimonial-placeholder-note {
+  font-size: var(--step--1);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  opacity: 1;
+  margin-bottom: 1rem;
+}
+
+/* ==========================================================================
+   27. COUNTER OUTLINE NUMERALS
+   Same fault as the marquee: `.web-counter-value { font-family:
+   var(--font-outline) }` resolves to nothing, because Clash Display has no
+   outline cut and the token is deliberately undefined. The numerals rendered
+   SOLID, losing the outline-to-solid weight change that is the whole effect.
+
+   On hover the source swaps to --font-heavy; here the stroke is dropped and
+   the fill restored, which is the same read.
+   ========================================================================== */
+@supports (-webkit-text-stroke: 1px black) {
+  .web-counters-wrap .web-counter-value {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--c-black);
+    paint-order: stroke fill;
+    transition: color var(--dur-base) var(--ease-out);
+  }
+  .web-counters-wrap .web-counter:hover .web-counter-value {
+    color: var(--c-black);
+    -webkit-text-stroke: 0;
+  }
+}
+
+/* ==========================================================================
+   28. TECH LOGO ROW
+   The reference presents real vendor logos, dimmed at rest and full on hover.
+   The source markup put the label inside the SVG; here it is real text, so it
+   renders in the site's own face and is readable by assistive tech.
+   ========================================================================== */
+.section-technology-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.5rem 4.5rem;
+  margin-top: 5rem;
+}
+.section-technology-list .tech-box {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  width: 8rem;
+}
+.section-technology-list .tech-box img {
+  width: auto;
+  height: 5.5rem;
+  max-width: 100%;
+  object-fit: contain;
+}
+.tech-box-label {
+  font-size: var(--step--1);
+  color: var(--fg-muted);
+}
+@media (max-width: 767px) {
+  .section-technology-list {
+    gap: 2.5rem 2.5rem;
+  }
+  .section-technology-list .tech-box {
+    width: 6rem;
+  }
+  .section-technology-list .tech-box img {
+    height: 4rem;
+  }
+}
+
+/* ==========================================================================
+   29. IDENTITY LOCKUPS
+   The client supplies a STACKED logo — monogram above a two-line wordmark.
+   Stacked marks need height to stay legible, and a header strip has none:
+   at 4rem the words rendered as an unreadable smudge on mobile.
+
+   The header therefore uses a HORIZONTAL lockup built from the same brand:
+   the monogram as an image, the name as real text in the site's display
+   face. That is crisp at any size, inverts correctly in dark mode, and is
+   readable by assistive tech. The footer keeps the stacked lockup, where
+   there is vertical room for it.
+   ========================================================================== */
+/* theme.css sets `.main-header .main-logo { display: inline-block }` at
+   specificity (0,2,0); these match it so the horizontal flex actually wins. */
+.main-header .main-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  text-decoration: none;
+  color: inherit;
+}
+.main-header .main-logo-mark {
+  width: auto;
+  height: 3.1rem;
+  max-height: none;
+  flex: none;
+}
+.main-logo-word {
+  display: grid;
+  line-height: 0.98;
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+.main-logo-word strong {
+  font-weight: 700;
+  font-size: max(16px, 1.45rem);
+  color: var(--c-black);
+}
+.main-logo-word em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: max(16px, 1.45rem);
+  color: var(--accent);
+  /* Optically align the two words: "WEAVERS" is the wider of the pair. */
+  letter-spacing: 0.055em;
+}
+
+@media (max-width: 767px) {
+  .main-header .main-logo {
+    gap: 0.65rem;
+  }
+  .main-header .main-logo-mark {
+    height: 3.4rem;
+  }
+  /* The root scale drops to ~8px on a phone, so the wordmark needs a larger
+     rem multiplier here just to hold its rendered size. */
+  .main-logo-word strong,
+  .main-logo-word em {
+    font-size: max(18px, 1.75rem);
+  }
+}
+/* Below 380px the wordmark competes with the menu button for room; the
+   monogram alone still identifies the brand. */
+@media (max-width: 379px) {
+  .main-logo-word {
+    display: none;
+  }
+}
+
+/* The footer keeps the supplied stacked lockup. */
+.footer-logo img {
+  width: auto;
+  height: 6.5rem;
+  max-width: 100%;
+}
+
+/* ==========================================================================
+   30. MENU BUTTON — A CIRCLE, NOT A BOX
+   The button rendered as a grey rounded rectangle. Every part of it is
+   already circular in the ported stylesheet (.toggle-menu-wrap and
+   .toggle-menu-progress are both border-radius:50%), and theme.css already
+   implements the hamburger-to-X properly by animating two absolutely
+   positioned bars.
+
+   What showed was the BROWSER'S DEFAULT BUTTON CHROME underneath: theme.css
+   carries `button { border-radius: 0 }` and `-webkit-appearance: button`
+   from Bootstrap's reset and never neutralises them on this control.
+
+   So this resets the element and nothing else — overriding the bar geometry
+   here only fights the design and breaks the X. The reference build has the
+   same defect.
+   ========================================================================== */
+.toggle-menu {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.toggle-menu:focus {
+  outline: none;
+}
+.toggle-menu:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* At rest the ring is a hairline circle; it fills with the scroll-progress
+   conic gradient once the header goes sticky. */
+.toggle-menu-progress {
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+.toggle-menu:hover .toggle-menu-wrap {
+  background-color: var(--accent-tint);
+}
+
+/* ==========================================================================
+   31. "GET IN TOUCH"
+   It was bare link text sitting next to a button, which read as an
+   afterthought. A compact outline pill that fills on hover matches the
+   hero's own button language without competing with it.
+   ========================================================================== */
+.main-header--nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.6rem;
+  border: 1.5px solid var(--accent);
+  border-radius: 35px;
+  color: var(--accent);
+  /* A floor above the caption tier: this is the header's only CTA and a
+     primary tap target, so it must not shrink to label size on a phone. */
+  font: 600 max(14px, var(--step--1)) / 1 var(--font-body);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.main-header--nav a::after {
+  content: '\2192';
+  transform: translateX(0);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.main-header--nav a:hover {
+  background: var(--accent);
+  /* Teal is dark — white type, never black. */
+  color: #fff;
+}
+.main-header--nav a:hover::after {
+  transform: translateX(3px);
+}
+@media (max-width: 575px) {
+  .main-header--nav a {
+    padding: 0.6rem 1.1rem;
+  }
+  .main-header--nav a::after {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   32. TEXT CONTRAST ON THE DARK BAND
+   The brand teal is a MID-DARK colour. As type on the near-black band it
+   measures 3.29:1 — it fails AA, and it is exactly why the Why Us section
+   was hard to read. The accent still owns the band's identity, but as TEXT
+   it has to lighten.
+
+       accent   #417284 on #141b1e   3.29:1  FAIL
+       soft     #a8c4ce on #141b1e   9.50:1  PASS
+
+   Fills and borders keep the full-strength accent; only type changes.
+   ========================================================================== */
+.section-dark h1 span,
+.section-dark h2 span,
+.section-dark h3 span,
+.section-dark h4 span,
+.section-dark h5 span,
+.section-dark h6 span,
+.section-dark .h1 span,
+.section-dark .h2 span,
+.section-dark .h3 span,
+.section-dark .h4 span,
+.section-dark .h5 span,
+.section-dark .h6 span,
+.section-dark .btn-link span,
+.section-dark a:not(.btn) {
+  color: var(--accent-soft);
+}
+
+/* ==========================================================================
+   33. WHY US — READABILITY
+   The rows were dense and the labels small for the amount of vertical space
+   they occupy. More room per row, a clearer open state, and body copy at a
+   comfortable measure.
+   ========================================================================== */
+.section-why-us .accordion-item {
+  border-bottom: 1px solid color-mix(in oklch, var(--accent-soft) 22%, transparent);
+}
+.section-why-us .btn-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  width: 100%;
+  padding: 2.2rem 0;
+  text-decoration: none;
+}
+.section-why-us .btn-link span {
+  font: 600 var(--step-1) / 1.2 var(--font-display);
+  letter-spacing: 0.02em;
+}
+.section-why-us .accordion-item[data-open='true'] .btn-link span {
+  color: #fff;
+}
+.section-why-us .card-body {
+  padding-bottom: 2.5rem;
+}
+.section-why-us .card-mini p {
+  max-width: 56ch;
+  line-height: var(--leading-body);
+}
+
+/* ==========================================================================
+   34. THE ACCORDION +/- SIGN
+   theme.css styles this under `.section-dark .accordion .card-header h2 .btn
+   .plus-minus-sign`. The trigger heading is an h3, not an h2, because every
+   section that uses the accordion already owns an h2 and skipping a level
+   would break the document outline. So the sign is restyled for the real
+   structure rather than the heading being downgraded to match the CSS.
+
+   Scoped to `.accordion`, not to one section. It was `.section-why-us` only,
+   which left the service-page FAQ with the bars at their unstyled defaults —
+   height 0, transparent, and stretched to the full width of the button. Ten
+   pages of FAQ rows had no expand affordance at all. One component, one rule.
+
+   The motion is the source's: the horizontal bar fades AND rotates while
+   both bars spin, so open and close read as one continuous gesture.
+   ========================================================================== */
+/* The trigger is a block-level button in the component markup, so the label
+   and the sign need an explicit row to sit at opposite ends. */
+.accordion .card-header .btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  width: 100%;
+}
+.accordion .plus-minus-sign {
+  position: relative;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: none;
+}
+.accordion .plus-minus-sign .horizontal,
+.accordion .plus-minus-sign .vertical {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background-color: var(--accent-soft);
+  border-radius: 0.3125rem;
+  transition: transform var(--dur-slow) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out);
+}
+.accordion .plus-minus-sign .horizontal {
+  width: 1.6rem;
+  height: 0.18rem;
+  margin-left: -0.8rem;
+  margin-top: -0.09rem;
+  transform: rotate(-90deg);
+}
+.accordion .plus-minus-sign .vertical {
+  width: 0.18rem;
+  height: 1.6rem;
+  margin-left: -0.09rem;
+  margin-top: -0.8rem;
+  transform: rotate(-90deg);
+}
+.accordion .plus-minus-sign.opened .vertical {
+  transform: rotate(90deg);
+}
+.accordion .plus-minus-sign.opened .horizontal {
+  transform: rotate(90deg);
+  opacity: 0;
+}
+.section-why-us .accordion-item[data-open='true'] .plus-minus-sign .vertical {
+  background-color: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .accordion .plus-minus-sign .horizontal,
+  .accordion .plus-minus-sign .vertical {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   35. WHY US — LADDER SPACING
+   The source's zig-zag ladder is tuned for a full-page section. Inside an
+   accordion panel it comes apart in three ways:
+
+   - `.step-cards-count` is `position: absolute; right: 0; width: 50%`, so the
+     numeral lands in the half OPPOSITE its own card — "01." sat ~700px from
+     the sentence it labels.
+   - at 6.875rem it is set larger than the copy it annotates, so the index
+     outranks the content.
+   - the challenge card gets a surface only below 1024px, so on desktop it is
+     bare text sitting beside a filled card, and the pair stops reading as a
+     matched set.
+
+   The zig-zag stays: each pair is placed in its own half of the row, odd left
+   and even right, with the numeral stacked directly above the card it counts.
+   ========================================================================== */
+.section-why-us .step-cards {
+  margin: 0;
+  /* Enough that the last card clears the next accordion row's rule. */
+  padding: 0 0 2rem;
+}
+.section-why-us .step-cards > li {
+  margin-bottom: 0;
+  padding-top: 0;
+  position: relative;
+}
+/* Out of absolute flow and into the row's grid, stacked over its own card. */
+.section-why-us .step-cards > li .step-cards-count,
+.section-why-us .step-cards > li:nth-child(even) .step-cards-count {
+  position: static;
+  width: auto;
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0 0 0.5rem;
+  font-size: 3.25rem;
+  line-height: 1;
+  text-align: start;
+  opacity: 0.85;
+}
+.section-why-us .step-cards > li .column {
+  grid-column: 1;
+  grid-row: 2;
+  padding: 0;
+}
+.section-why-us .step-cards .card-mini,
+.section-why-us .step-cards > li .column .card-mini,
+.section-why-us .step-cards > li .column .card-mini.primary {
+  margin: 0;
+}
+/* Both halves are cards; only the fill differs, so the pair reads as
+   challenge then response rather than caption then card. */
+.section-why-us .step-cards .card-mini:not(.primary) {
+  background: color-mix(in oklch, #fff 4%, transparent);
+  border: 1px solid color-mix(in oklch, #fff 12%, transparent);
+}
+.section-why-us .step-cards > li + li {
+  margin-top: 2.5rem;
+}
+
+@media (min-width: 1025px) {
+  /* The offset that gives the ladder its zig-zag — now a whole pair moving,
+     numeral with card, instead of the numeral crossing to the other side. */
+  .section-why-us .step-cards > li:nth-child(even) .step-cards-count,
+  .section-why-us .step-cards > li:nth-child(even) .column {
+    grid-column: 2;
+  }
+  .section-why-us .step-cards > li + li {
+    margin-top: -1.5rem;
+  }
+}
+
+/* ==========================================================================
+   36. SERVICE CARD — FILL STATE
+   On hover the card fills with the brand colour. theme.css colours the
+   heading and the capability list with --c-black, which is the source's
+   amber assumption again: on teal that is 3.96:1 and reads as muddy grey.
+
+   The list was also being clipped mid-item, because the full capability
+   labels run to several words. The card now renders `highlights` — the same
+   offerings named tightly enough to fit — and the shell is given room for
+   four of them.
+   ========================================================================== */
+.section-our-services .service-box:hover .service-box-wrap,
+.section-our-services .service-box:focus-within .service-box-wrap {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+.section-our-services .service-box:hover .service-box-heading,
+.section-our-services .service-box:hover .service-box-heading span,
+.section-our-services .service-box:hover .service-box-figcaption,
+.section-our-services .service-box:hover .service-box-figcaption li,
+.section-our-services .service-box:hover .service-box-icon,
+.section-our-services .service-box:hover .service-box-icon i,
+.section-our-services .service-box:focus-within .service-box-icon i,
+.section-our-services .service-box:focus-within .service-box-heading,
+.section-our-services .service-box:focus-within .service-box-heading span,
+.section-our-services .service-box:focus-within .service-box-figcaption li {
+  color: #fff;
+}
+.section-our-services .service-box-figcaption ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.section-our-services .service-box-figcaption li {
+  font-size: var(--step--1);
+  line-height: 1.35;
+}
+/* Room for four highlights plus the heading, so nothing is clipped. */
+.section-our-services .service-box:hover .service-box-figcaption,
+.section-our-services .service-box:focus-within .service-box-figcaption {
+  max-height: 18rem;
+}
+
+/* theme.css:2042 fades the WHOLE box — logo and label — with
+   `.section-technology .tech-box:not(:hover) { opacity: 0.6 }`, and this file
+   used to add a second 0.82 on the image on top of it. On a white page that
+   reads as the marks being washed out rather than calm, it made the hover a
+   brightness change so the row looked half-loaded until pointed at, and
+   fading the label is muting text, which is never safe. Both are dropped. */
+.section-technology .tech-box:not(:hover) {
+  opacity: 1;
+}
+
+/*
+
+   Full strength at rest instead. The hover is a tinted plate that scales in
+   behind the mark, so the feedback is a surface appearing rather than the
+   logo changing colour. Only opacity and transform animate, which keeps the
+   effect off the layout path. */
+.section-technology-list .tech-box {
+  position: relative;
+  isolation: isolate;
+  padding: 1.25rem 0.75rem 1rem;
+  border-radius: 16px;
+}
+.section-technology-list .tech-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: color-mix(in oklch, var(--accent) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 20%, transparent);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.section-technology-list .tech-box:hover::before {
+  opacity: 1;
+  transform: none;
+}
+.section-technology-list .tech-box img {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.section-technology-list .tech-box:hover img {
+  transform: scale(1.07);
+}
+/* The label carries the state change too, but by going to full foreground —
+   the accent is a teal that does not hold contrast at label size. */
+.section-technology-list .tech-box-label {
+  transition: color var(--dur-base) var(--ease-out);
+}
+.section-technology-list .tech-box:hover .tech-box-label {
+  color: var(--fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-technology-list .tech-box::before,
+  .section-technology-list .tech-box img {
+    transition: none;
+  }
+  .section-technology-list .tech-box::before {
+    transform: none;
+  }
+  .section-technology-list .tech-box:hover img {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   37. FEATURED WORK — DON'T CROP THE LOGOS
+   The reference showed wide website SCREENSHOTS here, so `object-fit: cover`
+   on a 1.6/1 box and a card pulled up 6.25rem over the lower edge worked.
+
+   Dream Weavers publish SQUARE CLIENT LOGOS instead. `cover` crops them top
+   and bottom, and the overlapping card then covers most of what survived —
+   the marks were unreadable.
+
+   So: contain rather than cover, a tinted panel behind so the transparent
+   marks have a surface, and the logo pushed into the upper part of the box
+   so the card overlaps empty space rather than artwork.
+   ========================================================================== */
+.featured-work-box {
+  position: relative;
+}
+.featured-work-box-img {
+  aspect-ratio: 1.35 / 1;
+  max-height: none;
+  height: auto;
+  object-fit: contain;
+  /* Sit the mark above the strip the card will cover. */
+  object-position: center 34%;
+  /* White, not the tinted surface: several client logos are supplied on a
+     white background, and on a grey panel they read as pasted-in squares. */
+  background: #fff;
+  padding: 2.25rem 2.25rem 7rem;
+  border: 1px solid var(--line);
+}
+
+/* The card sits inset so the panel edge still reads behind it. */
+.featured-work-box-data {
+  transform: translateY(-5rem);
+  padding: 0 1.5rem;
+}
+.featured-work-box-data .card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  min-height: 0;
+  transition: box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+.featured-work-box:hover .featured-work-box-data .card {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+.featured-work-box-data .card-body {
+  padding: 1.75rem;
+}
+.featured-work-box-data .h5 {
+  margin-bottom: 0.5rem;
+}
+.featured-work-box-data p {
+  font-size: var(--step--1);
+  line-height: 1.5;
+  color: var(--fg-muted);
+  margin-bottom: 1.25rem;
+}
+.featured-work-box-data .h6 {
+  margin-bottom: 0.15rem;
+}
+.featured-work-box-data small {
+  font-size: var(--step--1);
+  color: var(--fg-muted);
+}
+.featured-work-box-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--accent);
+  transition: background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+.featured-work-box:hover .featured-work-box-arrow {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  transform: translateX(3px);
+}
+
+/* Equal-height cards: descriptions and discipline lists differ in length, so
+   without this the row of cards ends ragged. */
+.owl-carousel[data-owl-mode='cards'] .owl-item,
+.owl-carousel[data-owl-mode='cards'] .owl-item > .item,
+.owl-carousel[data-owl-mode='cards'] .owl-item > .item > a,
+.owl-carousel[data-owl-mode='cards'] .featured-work-box {
+  height: 100%;
+}
+.owl-carousel[data-owl-mode='cards'] .featured-work-box {
+  display: flex;
+  flex-direction: column;
+}
+.owl-carousel[data-owl-mode='cards'] .featured-work-box-data {
+  flex: 1;
+  display: flex;
+}
+.owl-carousel[data-owl-mode='cards'] .featured-work-box-data .card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.owl-carousel[data-owl-mode='cards'] .featured-work-box-data .card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+/* Pin the disciplines row to the bottom so the arrows line up across cards. */
+.owl-carousel[data-owl-mode='cards'] .featured-work-box-data .card-body > .row {
+  margin-top: auto;
+}
+
+/* ==========================================================================
+   38. MARQUEE — THE SEAM
+   The loop stuttered. The keyframes run
+       --move-initial: calc(-25% + var(--offset))
+       --move-final:   calc(-50% + var(--offset))
+   which travels 25% of the strip's width. The strip holds the row content
+   TWICE, so one full copy is 50% of that width. Travelling 25% and then
+   snapping back leaves a visible 25% jump on every cycle — that is the
+   glitch, not a rendering artifact.
+
+   Travelling exactly one copy (0 -> -50%) makes the reset land on identical
+   pixels, so the loop is invisible. Rows are staggered with a negative
+   animation-delay instead of a positional offset, which cannot desynchronise
+   the seam.
+   ========================================================================== */
+.section-marquee-item .marquee-inner {
+  --move-initial: 0%;
+  --move-final: -50%;
+  /* Slower than the source's 10s: the band is very large, and at that speed
+     the words were hard to actually read. */
+  animation-duration: 26s;
+  will-change: transform;
+}
+/* Stagger the rows so they do not march in lockstep. */
+.section-marquee-wrap .section-marquee-item:nth-child(2) .marquee-inner {
+  animation-delay: -9s;
+}
+.section-marquee-wrap .section-marquee-item:nth-child(3) .marquee-inner {
+  animation-delay: -18s;
+}
+
+/* Even spacing between words; the source relied on literal " - " separators
+   whose width varied with the surrounding letterforms. */
+.section-marquee-item .marquee-inner > div {
+  padding-inline: 0.35em;
+}
+
+/* Vertical rhythm: three rows of very large type need room to breathe. */
+.section-marquee {
+  padding-block: 6rem;
+}
+.section-marquee-wrap {
+  display: grid;
+  gap: 0.6rem;
+}
+
+/* ==========================================================================
+   39. MARQUEE HOVER
+   The source revealed a SECOND solid copy of each word, offset 5px behind
+   the outline. That works with a real outline typeface, where both cuts
+   share metrics. Here the outline is faked with -webkit-text-stroke, which
+   ADDS to glyph width — so the two copies were different widths (797px vs
+   823px on one word) and the reveal smeared into an unreadable double image.
+
+   Filling the word itself gives the same outline-to-solid read with nothing
+   to misalign. The stroke recolours with the fill so the edge does not stay
+   black around a teal letter.
+   ========================================================================== */
+.section-marquee-item .marquee-inner > div .marquee-text-hover {
+  display: none;
+}
+.section-marquee-item .marquee-inner > div .marquee-text {
+  transition: color var(--dur-base) var(--ease-out),
+    -webkit-text-stroke-color var(--dur-base) var(--ease-out);
+}
+.section-marquee-item .marquee-inner > div:hover .marquee-text {
+  color: var(--accent);
+  -webkit-text-stroke-color: var(--accent);
+}
+/* The reversed middle row picks up the softer tint, as the source does. */
+.section-marquee-item:nth-child(2) .marquee-inner > div:hover .marquee-text {
+  color: var(--accent-deep);
+  -webkit-text-stroke-color: var(--accent-deep);
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-marquee-item .marquee-inner > div .marquee-text {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   40. SERVICE CARD — SMOOTH HOVER
+   The stutter had three compounding causes in the ported stylesheet:
+
+     1. `.service-box * { transition: all 0.5s }` — EVERY descendant
+        transitions EVERY property, so one hover schedules dozens of
+        animations, most of them on properties that never change.
+     2. The hover animates `top`, `min-height` and `max-height`. Those are
+        LAYOUT properties: each frame forces layout, paint and composite for
+        the whole grid, not just the card.
+     3. The card is inside a flex column, so every one of those frames also
+        re-solves the flex layout.
+
+   This replaces all of it with transform and opacity, which the compositor
+   can run without touching layout. The card keeps its footprint; the fill,
+   the lift and the description reveal carry the effect.
+   ========================================================================== */
+.section-our-services .service-box,
+.section-our-services .service-box * {
+  transition: none;
+}
+
+.section-our-services .service-box-wrap {
+  /* Fixed footprint — nothing below shifts, and no frame needs layout. */
+  top: 0;
+  min-height: 24rem;
+  transform: translateY(0) scale(1);
+  transform-origin: center;
+  will-change: transform;
+  /* Scope paint to the card so a hover cannot dirty its siblings. */
+  contain: paint;
+  transition: background-color var(--dur-slow) var(--ease-out),
+    border-color var(--dur-slow) var(--ease-out),
+    box-shadow var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+.section-our-services .service-box:hover .service-box-wrap,
+.section-our-services .service-box:focus-within .service-box-wrap {
+  /* The source grew the box by animating min-height and re-centred it with
+     top/translate. A small scale reads as the same "grows past its bounds"
+     gesture and costs one composited frame. */
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: var(--shadow-lg);
+  min-height: 24rem;
+  top: 0;
+}
+
+.section-our-services .service-box-icon,
+.section-our-services .service-box-icon i,
+.section-our-services .service-box-heading,
+.section-our-services .service-box-heading span {
+  transition: color var(--dur-base) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+
+/* The description reveals with opacity and a small rise — NOT by animating
+   height. Its space is reserved at rest, so no frame of the transition needs
+   layout at all. Measured over four hovers:
+       grid-template-rows reveal   310 layouts, 60.9ms layout
+       opacity + transform reveal  193 layouts, 12.9ms layout
+   The list is hidden from assistive tech while invisible so it is not read
+   out of a card that appears empty. */
+.section-our-services .service-box-figcaption {
+  max-height: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+.section-our-services .service-box:hover .service-box-figcaption,
+.section-our-services .service-box:focus-within .service-box-figcaption {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-our-services .service-box-wrap,
+  .section-our-services .service-box-figcaption {
+    transition: none;
+  }
+  .section-our-services .service-box:hover .service-box-wrap {
+    transform: none;
+  }
+}
+
+/* The challenge card sits on the dark band but `.card-mini` still carries
+   `color: var(--fg)` (#202020) from the light-section default. The paragraph
+   is lightened by a .section-dark rule; the heading was not, so it rendered
+   near-black on a near-black card. Both are set explicitly here. */
+.section-dark .card-mini:not(.primary),
+.section-dark .card-mini:not(.primary) p,
+.section-dark .card-mini:not(.primary) .card-mini-heading {
+  color: #fff;
+}
+
+/* ==========================================================================
+   41. THE TWO GRID COLUMNS THE SOURCE NEVER SHIPPED
+   The ported sheet defines .col-lg-{2,3,4,6,8,12} and nothing else in that
+   tier. The service detail page asks for a 7/5 split, so BOTH columns fell
+   back to width:100% and the two-column body collapsed to a stack on all ten
+   pages — with the image then painting at its intrinsic 1024px, 92% of the
+   container, which is also what produced Next's aspect-ratio warning.
+
+   Same flex-basis arithmetic as the columns the source did define, so the
+   pair behaves identically to its siblings.
+   ========================================================================== */
+.col-lg-5,
+.col-lg-7 {
+  position: relative;
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+}
+@media (min-width: 992px) {
+  .col-lg-5 {
+    flex: 0 0 41.6666666667%;
+    max-width: 41.6666666667%;
+  }
+  .col-lg-7 {
+    flex: 0 0 58.3333333333%;
+    max-width: 58.3333333333%;
+  }
+}
+/* Below the split the image is full-bleed in its own row, so it needs the
+   breathing room the flex gap used to imply. */
+@media (max-width: 991px) {
+  .section-service-body .col-lg-5 {
+    margin-top: 2.5rem;
+  }
+}
+
+/* ==========================================================================
+   42. SERVICE CARD — THE HIGHLIGHTS ARE THE CARD, NOT A HOVER EASTER EGG
+   Two faults, one cause. `.service-box-figcaption` was `max-height: 0` and
+   the only rule that opened it lived inside `@media (min-width: 768px)` on
+   `:hover`:
+
+     - below 768px nothing opens it, ever. Four highlights per card sat in
+       the DOM and could not be reached on any touch device.
+     - above it, `.service-box` is a fixed 22.8125rem while the content is
+       roughly a third of that, so nine cards out of ten read as empty boxes
+       at rest — and the wrap's own `min-height: 24rem` is TALLER than the
+       box that clips it, so the hover state clipped its own last line.
+
+   The highlights are what distinguishes one card from another, so they are
+   shown at rest. The hover keeps its job: the brand fill and the lift, both
+   still transform/opacity only, so §40's zero-layout hover is untouched.
+   Height comes from content now, equalised per row by the flex column.
+   ========================================================================== */
+.section-our-services-list > [class*='col-'] {
+  display: flex;
+}
+.section-our-services-list > [class*='col-'] > a {
+  display: flex;
+  width: 100%;
+}
+.section-our-services .service-box {
+  display: flex;
+  width: 100%;
+  height: auto;
+}
+.section-our-services .service-box-wrap,
+.section-our-services .service-box:hover .service-box-wrap,
+.section-our-services .service-box:focus-within .service-box-wrap {
+  position: static;
+  min-height: 0;
+  height: auto;
+  flex: 1;
+}
+/* Visible at rest; §36 already turns them white against the hover fill. */
+.section-our-services .service-box-figcaption,
+.section-our-services .service-box:hover .service-box-figcaption,
+.section-our-services .service-box:focus-within .service-box-figcaption {
+  max-height: none;
+  opacity: 1;
+  transform: none;
+}
+.section-our-services .service-box-figcaption {
+  margin-top: 1.25rem;
+}
+.section-our-services .service-box-figcaption li {
+  color: var(--fg-muted);
+  transition: color var(--dur-base) var(--ease-out);
+}
+/* theme.css drops the heading's padding to 0 on hover — the last piece of the
+   fixed-height card, where the title sat low and jumped up to make room for
+   the list appearing. The list is always visible now, so all that rule does
+   is shrink the card by 1.5rem mid-hover. The tallest card sets its row's
+   height, so hovering the one with a three-line title ("Database Management &
+   Administration") shortened the row and pulled every card below it upward.
+   Constant in both states, so a hover changes no geometry at all. */
+.section-our-services .service-box:hover .service-box-heading,
+.section-our-services .service-box:focus-within .service-box-heading {
+  padding-top: 1.5rem;
+}
+
+/* ==========================================================================
+   43. WHAT'S INCLUDED — THE LADDER BUG, FIXED WHERE IT ALSO LIVES
+   §35 fixed this geometry for Why Us and scoped the fix to `.section-why-us`,
+   so `.section-included` — same `.step-cards` markup — kept the broken base
+   rules: `.step-cards-count` is `position: absolute; width: 50%; right: 0`,
+   which lands each numeral in the half OPPOSITE the item it counts, ~700px
+   away, at 6.875rem, alternating sides. Below it sat ~250px of dead section.
+
+   Why Us is a zig-zag of paired challenge/response rows and its fix keeps
+   that. This section is three equal siblings, so it reads better as three
+   columns with each numeral stacked over the card it belongs to. The cards
+   also get their surface at every width — theme.css only grants one below
+   1024px, so on desktop they were bare text on the dark band.
+   ========================================================================== */
+.section-included .step-cards {
+  display: grid;
+  /* An absolute minimum, not rem: the root scale is fluid and drops to 8px at
+     375px, so a rem-based track would have let three cards squeeze into two
+     cramped columns on a phone. */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2.5rem;
+  padding: 0;
+  margin: 0;
+}
+.section-included .step-cards > li {
+  display: flex;
+  flex-direction: column;
+  padding-top: 0;
+  margin: 0;
+}
+/* Out of absolute flow, above its own card, and sized under the copy it
+   annotates rather than over it. */
+.section-included .step-cards > li .step-cards-count,
+.section-included .step-cards > li:nth-child(even) .step-cards-count {
+  position: static;
+  width: auto;
+  top: auto;
+  right: auto;
+  left: auto;
+  margin: 0 0 0.75rem;
+  font-size: 3rem;
+  line-height: 1;
+  text-align: start;
+  opacity: 0.8;
+}
+.section-included .step-cards > li .column {
+  padding: 0;
+  flex: 1;
+  display: flex;
+}
+.section-included .step-cards > li .column .card-mini,
+.section-included .step-cards > li .column .card-mini:not(.primary) {
+  margin: 0;
+  width: 100%;
+  background: color-mix(in oklch, #fff 4%, transparent);
+  border: 1px solid color-mix(in oklch, #fff 12%, transparent);
+  border-radius: 10px;
+  /* Extra start padding clears the bullet dot theme.css draws. */
+  padding: 1.75rem 1.75rem 1.75rem 2.75rem;
+}
+
+/* ==========================================================================
+   44. PROCESS BOXES — DON'T RESERVE SPACE FOR A LINK THAT ISN'T THERE
+   `.process-box` and `.process-box-wrap` both carry `min-height: 26.625rem`,
+   and the wrap adds `padding-bottom: 3.75rem`. Both exist for the
+   `.process-box-link` arrow that the home page's cards render in that
+   reserved corner. The service pages render no link, so every card was
+   360px of box around ~100px of text.
+
+   Measured against the presence of the link rather than against the page, so
+   whichever card actually has one keeps its geometry.
+   ========================================================================== */
+.section-process .process-box:not(:has(.process-box-link)) {
+  min-height: 0;
+}
+.section-process .process-box-wrap:not(:has(.process-box-link)) {
+  min-height: 0;
+  padding-bottom: 1.875rem;
+}
+/* Content-driven height would otherwise leave a row of ragged cards. */
+.section-process .row > [class*='col-']:not(.col-process-box-text-area) {
+  display: flex;
+}
+.section-process .row > [class*='col-']:not(.col-process-box-text-area) > .process-box {
+  display: flex;
+  width: 100%;
+}
+.section-process .process-box:not(:has(.process-box-link)) .process-box-wrap {
+  flex: 1;
+}
+
+/* ==========================================================================
+   45. FAQ PANEL — THE ANSWER LINES UP WITH ITS QUESTION
+   The panel body carried `.no-padding` — `padding: 0 !important` — while the
+   trigger button above it carries 1.85rem. Every answer therefore sat flush
+   against the panel edge, ~48px left of the question it answers. The
+   !important also quietly beat `.section-why-us .card-body`'s padding-bottom.
+
+   The class is gone from the component, so each accordion states its own
+   padding and it matches whatever inset its own trigger uses.
+   ========================================================================== */
+/* The question's inset is two boxes deep: `.card-header`'s 1.25rem plus the
+   trigger's own 2.1875rem. The answer matches the sum, so it starts exactly
+   under the first letter of the question. */
+.accordion .accordion-panel .card-body {
+  padding: 0 3.4375rem 1.5rem;
+}
+.accordion .accordion-panel .card-body > *:last-child {
+  margin-bottom: 0;
+}
+/* Why Us's trigger runs flush inside the header (§33), so only the header's
+   own inset applies there. */
+.section-why-us .accordion-panel .card-body {
+  padding: 0 1.25rem 2.5rem;
+}
+
+/* ==========================================================================
+   46. SERVICE DETAIL — HIERARCHY
+   With the layout faults fixed the page was correct but flat: seven sections
+   at identical margins, every one left-aligned copy on white, and the CTA —
+   the only thing on the page asking for a reply — rendered as the quietest
+   element of the seven. These give the page a top, a middle and an end.
+   ========================================================================== */
+
+/* -- hero ---------------------------------------------------------------- */
+/* Top padding comes from `.page-hero` (§15), which now clears the header once
+   instead of twice for every interior page. Only the bottom differs here: this
+   hero has no `.section-margin`, and the next section supplies the rest. */
+.section-service-hero {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  padding-bottom: 2rem;
+}
+/* The page opened on flat white. One soft wash behind the picture, in the one
+   brand colour, is enough to stop the top of the page reading as unstyled —
+   it is the same glow the process section already uses. */
+.section-service-hero::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -12rem;
+  right: -14rem;
+  width: 62rem;
+  height: 62rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--accent) 13%, transparent) 0%,
+    transparent 62%
+  );
+  pointer-events: none;
+}
+
+.service-hero-grid {
+  display: grid;
+  gap: 3.5rem;
+  align-items: center;
+}
+@media (min-width: 992px) {
+  .service-hero-grid {
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+    gap: 3rem 4.5rem;
+  }
+}
+
+/* Icon and label on one line. Stacked, the 80px tile pushed the h1 down and
+   added a third block of vertical air to a hero that already had too much. */
+.service-hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 1.125rem;
+  margin: 0 0 1.75rem;
+  font-size: var(--step--1);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.section-service-hero .service-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 14px;
+  font-size: max(17px, 1.65rem);
+  color: var(--accent);
+  background: color-mix(in oklch, var(--accent) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 22%, transparent);
+}
+.section-service-hero h1 {
+  margin-bottom: 1.5rem;
+}
+/* The one-line summary is the page's promise; at body size under a 75px
+   heading it read as a caption. */
+.section-service-hero .service-lead {
+  font-size: var(--step-1);
+  line-height: var(--leading-snug);
+  color: var(--fg-muted);
+  max-width: 34ch;
+  margin-bottom: 0;
+}
+/* The only ask used to be 3,100px down the page. */
+.service-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem 2.5rem;
+  margin-top: 3rem;
+}
+.service-hero-jump {
+  font-size: var(--step-0);
+  color: var(--fg-muted);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--fg-muted) 35%, transparent);
+  padding-bottom: 0.2rem;
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.service-hero-jump:hover,
+.service-hero-jump:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* -- hero picture -------------------------------------------------------- */
+.service-hero-media {
+  position: relative;
+}
+/* An offset accent plate. The photographs are client stock of uneven quality;
+   a deliberate frame reads as a decision rather than as a dropped-in image. */
+.service-hero-media::after {
+  content: '';
+  position: absolute;
+  inset: 1.75rem -1.75rem -1.75rem 1.75rem;
+  z-index: -1;
+  border-radius: 20px;
+  /* Opaque, not a transparent mix: over the hero's own teal wash a 12% mix
+     resolved to a muddy grey and read as a misplaced shadow. */
+  background: var(--accent-tint);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 25%, transparent);
+}
+.service-hero-img {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+}
+@media (max-width: 991px) {
+  .service-hero-media::after {
+    inset: 1.25rem -1.25rem -1.25rem 1.25rem;
+  }
+  .service-hero-img {
+    aspect-ratio: 16 / 9;
+  }
+}
+
+/* -- section label ------------------------------------------------------- */
+/* A running head for sections whose content carries no heading of its own. */
+.section-label {
+  margin: 0 0 1.5rem;
+  font-size: var(--step--1);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.section-label::before {
+  content: '';
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  margin-bottom: 1.25rem;
+  background: var(--accent);
+}
+
+/* -- overview prose ------------------------------------------------------ */
+.service-intro {
+  display: grid;
+  gap: 1rem 4.5rem;
+}
+@media (min-width: 992px) {
+  .service-intro {
+    grid-template-columns: 14rem minmax(0, 1fr);
+  }
+}
+.service-intro-prose p {
+  max-width: var(--measure);
+}
+/* The opening paragraph carries the whole pitch; at 15px it was the same size
+   as everything after it. */
+.service-intro-prose p:first-child {
+  font-size: var(--step-1);
+  line-height: var(--leading-snug);
+  color: var(--fg);
+}
+.service-intro-prose p:last-child {
+  margin-bottom: 0;
+}
+
+/* -- what's included ----------------------------------------------------- */
+/* 7.5rem top and bottom around a single row of three left ~110px of empty
+   band under the cards. */
+.section-included {
+  padding-block: 6rem;
+}
+/* Both are jump targets from the hero, and the header overlays the page. */
+.section-included,
+.section-faq {
+  scroll-margin-top: 8rem;
+}
+
+/* -- what this covers ---------------------------------------------------- */
+/* The densest content on the page was also its faintest: eleven identical
+   hairline pills. A tinted surface and full-strength type make the list read
+   as substance rather than as tags. Scoped, because `.industries-list` is
+   shared with the About page where the bare pill is correct. */
+/* The shared `.industries-list` carries `margin-bottom: 4rem` for the About
+   page, which stacked on top of the next section's 8.75rem margin here. */
+.section-capabilities .industries-list {
+  gap: 0.75rem 0.75rem;
+  margin-bottom: 0;
+}
+.section-capabilities .industries-list li {
+  background: var(--surface-alt);
+  border-color: var(--line);
+  color: var(--fg);
+  padding: 0.85rem 1.5rem;
+  transition: background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+.section-capabilities .industries-list li:hover {
+  background: var(--accent-tint);
+  border-color: color-mix(in oklch, var(--accent) 35%, transparent);
+}
+
+/* -- common questions ---------------------------------------------------- */
+/* The FAQ trigger is `.btn.btn-link`, so it inherited the site's BUTTON type:
+   800 weight, uppercase, teal, 15px, inside a `.card-header` with a grey
+   tint. Three questions therefore rendered as three grey buttons in a box.
+   A question is prose — it gets prose type and a hairline rule, and the card
+   chrome that the ported Bootstrap supplies is taken back off. */
+.faq-layout {
+  display: grid;
+  gap: 2.5rem;
+  align-items: start;
+}
+@media (min-width: 992px) {
+  .faq-layout {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 4.5rem;
+  }
+}
+.faq-intro-note {
+  max-width: 26ch;
+  color: var(--fg-muted);
+  margin-bottom: 0;
+}
+/* Was 60rem inside a 1200px container, which left the right of the section
+   empty. The heading now occupies that column. */
+.section-faq .faq-list {
+  max-width: none;
+}
+
+.section-faq .accordion,
+.section-faq .accordion-item,
+.section-faq .card-header {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+/* Rules go on the TOP of each item, with the closing rule on the container.
+   theme.css carries `.accordion > .card:not(:last-of-type) { border-bottom: 0 }`
+   at three classes of specificity, which beats anything two classes deep and
+   silently erased a per-item bottom border on all but the last question. */
+.section-faq .accordion {
+  border-bottom: 1px solid var(--line);
+}
+.section-faq .accordion-item {
+  border-top: 1px solid var(--line);
+}
+.section-faq .card-header h3 {
+  margin: 0;
+}
+.section-faq .btn-link {
+  min-width: 0;
+  padding: 1.9rem 0;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+  text-transform: none;
+  background: transparent;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+/* `.btn-link` underlines on hover and focus. The trigger is `btn-block`, so
+   that underline ran the full width of the row and read as a horizontal rule
+   between the question and its own answer. */
+.section-faq .btn-link,
+.section-faq .btn-link:hover,
+.section-faq .btn-link:focus {
+  text-decoration: none;
+  box-shadow: none;
+}
+.section-faq .btn-link span {
+  font: 500 var(--step-1) / 1.3 var(--font-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: none;
+  color: var(--fg);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.section-faq .btn-link:hover span,
+.section-faq .btn-link:focus-visible span,
+.section-faq .accordion-item[data-open='true'] .btn-link span {
+  color: var(--accent);
+}
+.section-faq .plus-minus-sign .horizontal,
+.section-faq .plus-minus-sign .vertical {
+  background-color: var(--fg-muted);
+}
+.section-faq .accordion-item[data-open='true'] .plus-minus-sign .vertical,
+.section-faq .btn-link:hover .plus-minus-sign .horizontal,
+.section-faq .btn-link:hover .plus-minus-sign .vertical {
+  background-color: var(--accent);
+}
+/* The trigger runs flush to the rule now, so the answer only needs to clear
+   the same zero inset — §45's 3.4375rem was measured against the old padded
+   button and would have indented the answer past its question. */
+.section-faq .accordion .accordion-panel .card-body {
+  padding: 0 0 2.25rem;
+}
+.section-faq .accordion .card-body p {
+  max-width: var(--measure);
+  color: var(--fg-muted);
+  margin-bottom: 0;
+}
+
+/* -- the closing band ---------------------------------------------------- */
+.section-service-cta {
+  padding-block: 5.5rem;
+}
+/* `.btn` is 800 weight sitewide. At this size, filled and uppercase, 800 is
+   heavier than the h2 it sits beside — the button shouted over the sentence
+   asking the question. 600 with tracking keeps the presence and loses the
+   shout. */
+.section-service-cta .btn-primary,
+.service-hero-actions .btn-primary {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.service-cta-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem 3rem;
+}
+.service-cta-inner h2 {
+  margin: 0;
+  max-width: 20ch;
+}
+.section-service-cta .btn-primary {
+  flex: none;
+}
+/* Was a 14px line trailing under a centred button. It is the only onward
+   route from the bottom of this page, so it gets a rule and its own row. */
+.section-service-cta .service-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 3.5rem 0 0;
+  padding-top: 2rem;
+  border-top: 1px solid color-mix(in oklch, #fff 12%, transparent);
+  color: var(--fg-muted-dark);
+}
+/* Colour is left to `.section-dark a`, which resolves to white here — 17.4:1
+   against the band, and the strongest thing in the row, which is right for
+   the only onward link on the page. */
+.section-service-cta .service-next a {
+  font-size: var(--step-0);
+  text-decoration: none;
+}
+.section-service-cta .service-next a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+@media (max-width: 767px) {
+  .section-service-hero {
+    padding-bottom: 3rem;
+  }
+  .section-service-hero .service-hero-icon {
+    width: 3rem;
+    height: 3rem;
+    font-size: max(15px, 1.4rem);
+    border-radius: 12px;
+  }
+  /* Full-width so the label is not squeezed onto two lines beside the CTA. */
+  .service-hero-actions .btn-primary {
+    width: 100%;
+  }
+  .section-faq .btn-link span {
+    font-size: var(--step-0);
+  }
+  .service-cta-inner {
+    align-items: flex-start;
+  }
+}
+
+/* ==========================================================================
+   HEADING TAG IS STRUCTURE; HEADING CLASS IS SIZE
+   Correcting a heading's LEVEL must not change how it LOOKS.
+
+   The About tab panels were h3 directly under the page h1, which skips a level
+   for anyone navigating by heading, so they are now h2 carrying `.h3` for their
+   size. That alone resized them: theme.css styles `.section-dark h2` with the
+   display face at --step-5, and at (0,1,1) that outranks a bare `.h3` at
+   (0,1,0). The headings grew one step and pushed the page down 4px — caught by
+   tests/e2e/visual.spec.ts.
+
+   The heading's <span> needs the same treatment: `.section-dark h2 span` sets
+   the heavy display face at --step-5, which the h3 form never matched, so the
+   inner word grew even after the heading itself was corrected.
+
+   Scoped to THIS section, deliberately. Two broader attempts both caused
+   regressions: a blanket `:is(h1..h6).hN` sits at (0,1,1) globally and starts
+   outranking the later class-only refinements the stylesheet relies on (moved
+   several pages by 3px), and a `.section-dark h2.h3` form also caught the
+   pre-existing `h2.h3` on the service detail page, shrinking a heading that
+   was never part of this change. Fix the conflict that exists, not every
+   conflict that might.
+   ========================================================================== */
+.section-about-tabs h2.h3 {
+  font: normal var(--step-4)/var(--leading-display) var(--font-light);
+}
+.section-about-tabs h2.h3 span {
+  font: inherit;
+}
+
+/* Footer navigation links were 20px tall with no vertical padding, under the
+   24px floor of WCAG 2.2 SC 2.5.8. inline-flex with a min-height grows the hit
+   area to 24px; where the line box is already that tall nothing moves. */
+.nav-footer li a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+/* ==========================================================================
+   MEGA MENU MUST FIT THE VIEWPORT
+   The open panel could put its own content out of reach.
+
+   Two rules fought each other. `.mega-menu-wrap` is `overflow-y: auto` so a
+   tall menu can scroll — but `.menu-open .mega-menu-wrap { overflow: visible }`
+   replaced that the moment the menu opened. That override exists for a real
+   reason: the nav's hover effect paints outline copies of each label OUTSIDE
+   the link (`::before` at `right: calc(100% + 1.25rem)`, `::after` mirrored),
+   and a clipping ancestor would cut those wings off.
+
+   So the panel scrolled only while closed, and once open anything past the
+   fold was simply unreachable. Measured: at 1440x700 the services row ended at
+   720px against a 700px viewport, and at 375x667 (iPhone SE) at 678px. Both
+   short-but-common screens.
+
+   CSS will not let one axis stay `visible` while the other scrolls — `visible`
+   computes to `auto` in that pairing — so the override could not simply be
+   narrowed to one axis. It does not need to be:
+
+   `.mega-menu` is `position: fixed; inset: 0`, so the wrap spans the entire
+   viewport width. Clipping at the wrap's horizontal edges is therefore the same
+   cut the viewport already makes, and the ghost wings lose nothing. The left
+   wing runs to about x=-152 at 1440 — off-screen either way — and the right
+   wing lands inside the panel, where nothing clips it. Verified against the
+   rendered hover state, not assumed.
+
+   (`overflow-x: clip` was tried first, to keep `overflow-clip-margin` in play.
+   Chromium computes clip to `hidden` once the other axis scrolls, so the margin
+   never applied. Same result, two more declarations — hence plain `hidden`.)
+   ========================================================================== */
+.menu-open .mega-menu-wrap {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Reclaiming the header clearance, which is what squeezed the content in the
+   first place: 13rem is 176px at 1440, a quarter of a 700px-tall screen. The
+   panel is measured against viewport HEIGHT here, which no other rule in the
+   stylesheet does — the breakpoints are all width-based, and a short laptop is
+   not a narrow one. */
+/* 7.5rem is a floor, not a preference. The header logo's bottom edge tracks
+   almost exactly 6rem across every width (measured: 95px at 1920, 80 at 1440,
+   67 at 1024, 59 at 768, 50 at 375 — the root scale is width-clamped, so one
+   rem value fits them all), and the panel is transparent to the fixed header
+   above it. Going below this makes the first menu item collide with the
+   wordmark; an earlier 5rem attempt did exactly that at 1440x700, 768x700 and
+   375x667. Reclaim space from the rhythm below instead. */
+@media (max-height: 860px) {
+  .mega-menu {
+    padding-top: 7.5rem;
+  }
+}
+@media (max-height: 700px) {
+  .mega-menu-nav ul > li + li {
+    margin-top: 1.1rem;
+  }
+  .mega-menu-sub-nav {
+    margin-bottom: 2rem;
+  }
+  .mega-menu h6,
+  .mega-menu .h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.85rem;
+  }
+}
+
+/* The header sits ON TOP of the open mega-menu panel, which is dark. "DREAM"
+   is --c-black and the monogram's ink is dark too, so with the menu open the
+   left half of the lockup simply vanished — visible in the panel screenshots
+   as a floating teal "WEAVERS" beside nothing.
+
+   theme.css:1098 was meant to handle this (`.menu-open ... svg path[fill=
+   "black"] { fill: white }`) but it targets an inline SVG, and the lockup has
+   since become an <img> plus HTML text. The rule kept matching nothing. */
+.main-logo-mark--invert {
+  display: none;
+}
+.menu-open .main-header .main-logo-mark {
+  display: none;
+}
+.menu-open .main-header .main-logo-mark--invert {
+  display: block;
+}
+.menu-open .main-logo-word strong {
+  color: var(--c-white);
+}
+/* --accent at #417284 is too dark against the panel; --accent-soft is the
+   token the rest of the dark sections already use for the same reason. */
+.menu-open .main-logo-word em {
+  color: var(--accent-soft);
+}
+
+/* ==========================================================================
+   MEGA MENU HOVER: ONE WING, NOT TWO
+   The nav's hover effect paints outline copies of the label on BOTH sides of
+   the link. The left one never fitted.
+
+   The primary menu is left-aligned inside the container, so a label's left
+   copy is laid out at `right: calc(100% + 1.25rem)` — i.e. its own width plus
+   a gap to the LEFT of a link that already starts near the viewport edge.
+   Measured at 1440: the link runs 180 -> 492, the copy is 312 wide, so the
+   left wing begins at x = -152 and "Our Services" rendered as "ervices" jammed
+   against the edge of the screen. This is not a narrow-viewport artefact —
+   widening the window moves the container in, not out: at 1920 it still
+   computes to -32. There is no viewport at which it fits.
+
+   So the wing is removed rather than clipped, faded or shrunk. The right copy
+   has room at every width (ending at 825 of 1440) and carries the same motion,
+   so the effect keeps its character and simply stops bleeding off-screen.
+   ========================================================================== */
+.mega-menu-nav ul > li a::before {
+  content: none;
+}
+
+/* With the services row gone the nav no longer fills the panel, so the block
+   sat against the top with a third of the screen empty beneath it. Centre it
+   in the space below the header clearance instead. */
+.menu-open .mega-menu-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.mega-menu-wrap > .container {
+  /* `margin-block: auto`, NOT `justify-content: center`. In a scroll container
+     justify-content clips the leading edge once the content overflows — the
+     top of the menu would become unreachable on a short screen, which is the
+     exact failure this panel was just fixed for. Auto margins collapse to zero
+     when there is no spare room, so centring and scrolling coexist. */
+  margin-block: auto;
+}
+
+/* ==========================================================================
+   48. FOOTER PROSE MEASURE
+   The footer lead was `text-align: justify` at every width. Below the point
+   where the column is wide enough to justify without rivers, it now sets
+   left — see the note in theme.css. Justification returns at >=992px, where
+   the column is a comfortable measure.
+   ========================================================================== */
+@media (min-width: 992px) {
+  .main-footer .p {
+    text-align: justify;
+  }
+}

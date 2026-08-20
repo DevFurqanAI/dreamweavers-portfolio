@@ -1,0 +1,39 @@
+/* ==========================================================================
+   FONTS
+   --------------------------------------------------------------------------
+   Clash Display + Switzer, self-hosted from Fontshare (free for commercial
+   use). Both are VARIABLE fonts, so one file covers the whole weight range:
+   Clash 200-700 carries the two-tone headline's light/heavy contrast from a
+   single 28.7 KB file, where the source design needed six static cuts.
+
+   Gilmer — the source site's display face — is commercially licensed and is
+   deliberately NOT shipped. tests/unit/fonts.test.ts enforces that.
+
+   There is no outline cut. --font-outline is therefore left undefined in
+   tokens.css, and enhancements.css §3 renders outline type (the marquee and
+   the counters) with -webkit-text-stroke instead.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Variable.woff2') format('woff2-variations');
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/Switzer-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/Switzer-VariableItalic.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}

@@ -1,0 +1,215 @@
+/* ==========================================================================
+   TOKENS — THE REBRAND FILE
+   --------------------------------------------------------------------------
+   theme.css is the source design's own stylesheet, purged against the real
+   markup and rewritten so every colour and font resolves to a variable
+   declared here. Nothing downstream holds a raw hex or a font name.
+
+   To re-skin the whole site for a different company, edit THIS FILE ONLY.
+   Load order matters: fonts -> tokens -> icons -> theme -> enhancements
+   ========================================================================== */
+
+:root {
+  /* --- 1. BRAND ---------------------------------------------------------
+     A SINGLE-ACCENT system: one teal does every job — headings, buttons,
+     hover fills, the scroll ring, the testimonial slab, the marquee reveal.
+     There is no secondary brand colour, and the design's coherence depends
+     on that restraint. Keep it to one.
+
+     Sampled from the client logo: teal #417284, ink #202020.
+
+     ⚠ THE TRAP: the source design assumed BLACK type on its brand colour,
+     because its amber was light. Dream Weavers' teal is DARK —
+       white on #417284 = 5.30:1  (passes AA)
+       black on #417284 = 3.96:1  (FAILS AA)
+     so brand-filled surfaces need white foregrounds. That override lives at
+     the end of theme.css and is guarded by tests/unit/contrast.test.ts.
+     --------------------------------------------------------------------- */
+  --accent: #417284;
+  --accent-soft: #a8c4ce; /* borders, arrow button, reversed marquee row */
+  --accent-deep: #2e5666; /* pressed / hover                            */
+  --accent-tint: #eaf2f5; /* pale wash                                  */
+
+  /* --- 2. NEUTRALS ------------------------------------------------------
+     Prefixed `--c-` because Bootstrap's own :root — still present inside
+     theme.css — already declares --white. An unprefixed name compiles to
+     `--white: var(--white)`, a circular reference that is invalid at
+     computed-value time. CSS silently drops the declaration and every colour
+     depending on it falls back to inherited text colour. This bug shipped in
+     an intermediate build of the source design and made an entire dark
+     section's text invisible.
+
+     Neutrals are tinted ~0.01 chroma toward the brand hue rather than being
+     pure grey, so the palette reads as one system.
+     --------------------------------------------------------------------- */
+  --c-white: #ffffff;
+  --c-black: #202020; /* the logo's ink, not pure black */
+  --fg: #202020; /* body copy          */
+  /* Muted text. NEVER mute type with `opacity` — reducing alpha drops
+     contrast below 4.5:1 and is the single most common accessibility defect
+     in "elegant" designs. These are explicit colours, each measured:
+       --fg-muted        on --c-white      6.10:1
+       --fg-muted-dark   on --surface-dark 8.40:1
+     Guarded by tests/e2e/a11y.spec.ts. */
+  --fg-muted: #56636b;
+  --fg-muted-dark: #a9b6bd;
+  --line: #e6eaec; /* hairline borders   */
+  /* The same hairline, for dark surfaces. --line is a near-white rule: on
+     --surface-dark it lands at 14.39:1, brighter than the body copy on the
+     same band and brighter than the accent, so it reads as the loudest thing
+     in the section instead of the quietest. This sits at 1.55:1 — present,
+     recessive, and below the accent indicator it is meant to sit behind. */
+  --line-dark: #2f3d43;
+  --surface-alt: #f7f9fa; /* tinted band        */
+  --surface-dark: #141b1e; /* the dark section   */
+  --surface-dark-2: #1e282c; /* raised on dark     */
+
+  /* --- 3. TYPE ----------------------------------------------------------
+     Clash Display carries headlines; Switzer carries body. Both variable,
+     so the two-tone headline's light/heavy contrast comes from one file.
+
+     THE SCALE IS DRIVEN BY THE ROOT, NOT BY EACH STEP.
+
+     The source design ratchets `html { font-size }` across 15 breakpoints
+     (6px at <=425px up to 40px at >=5464px) and expresses all 3,478 lines of
+     its CSS in rem. That ratchet — not any per-element rule — is the real
+     responsive mechanism.
+
+     theme.css replaces those 15 steps with a single smooth em-based clamp,
+     which fixes three defects while preserving every designed proportion:
+       - AUDIT FIX #11: a px root overrides the user's font-size preference.
+         An em root is relative to it, so preferences survive.
+       - the original ratchet was NON-MONOTONIC: 1024px got a 12px root but
+         1366px dropped back to 10px, so the design shrank as the screen grew.
+       - AUDIT FIX #2: the h1 snapped to a hard 40px below 767px.
+
+     These steps are therefore PURE REM with no vw term. Adding a vw term
+     here would compound with the root scale and double-scale the type.
+     Values match the source's own heading scale exactly.
+     --------------------------------------------------------------------- */
+  --font-display: 'Clash Display', system-ui, -apple-system, sans-serif;
+  --font-body: 'Switzer', system-ui, -apple-system, sans-serif;
+
+  /* Aliases: theme.css still references the source's own token names. */
+  --font-light: var(--font-display);
+  --font-regular: var(--font-body);
+  --font-medium: var(--font-body);
+  --font-bold: var(--font-display);
+  --font-heavy: var(--font-display);
+  /* NOTE: --font-outline is deliberately NOT declared. Clash Display has no
+     outline cut, so enhancements.css §3 renders the marquee and counters
+     with -webkit-text-stroke instead. Declaring it would break that. */
+
+  /* The root scale itself. Consumed by theme.css `html { font-size }`.
+     `em` resolves against the user's default font size, so their preference
+     is respected. Effective root at a 16px default:
+       375px -> 8.0px    1024px -> 11.4px    1920px -> 16.0px
+       768px -> 10.0px   1440px -> 13.5px
+     which reproduces the source's h1 at 768px (47px) and 1920px (75px). */
+  --root-scale: clamp(0.5em, 0.3786em + 0.5178vw, 1em);
+
+  /* AUDIT FIX #13 — THE LEGIBILITY FLOOR.
+     The root scale above is a LAYOUT rhythm: it has to fall to 0.5em on a
+     phone or the source design's rem-expressed padding, gutters and card
+     widths would not fit a 375px screen. But type was riding the same
+     scale, and at an 8px root the rem steps resolved to:
+
+       375px:  step--1 = 7px   step-0 (body) = 9px   h6 = 12.5px
+       1024px: step--1 = 9.9px step-0 (body) = 12.8px
+
+     Body copy at 9px on a phone and 12.8px on a laptop. A measured audit of
+     the built site found 137 text elements under 15px at 375px and 94 at
+     1024px. That is the defect the layout scale was never meant to cause:
+     one variable cannot serve both layout rhythm and reading size.
+
+     The fix decouples them WITHOUT touching the root scale (which the
+     layout and tests/e2e/typography.spec.ts both depend on): each step now
+     carries a px floor via max(). max() only ever RAISES a value, so the
+     designed proportions at the top of the scale are untouched — at a 16px
+     root every rem term wins and the desktop design is byte-identical.
+
+     Floors are a reading scale, not a shrunken display scale:
+       step-0 is 16px because that is the comfortable mobile reading
+       minimum and the threshold below which iOS zooms on input focus.
+       The rest are spaced to keep the hierarchy monotone at 375px:
+       13 / 16 / 17 / 19 / 22 / 27.5 / 30 / 37.5.
+
+     px is deliberate here. `em` would resolve against the USE site (body),
+     not the root, and so would collapse with the very scale it guards
+     against. Because max() never shrinks anything, a user who has raised
+     their browser default still gets the larger rem value everywhere the
+     rem term exceeds the floor — the floor is a floor, never a cap. */
+  --step--1: max(13px, 0.875rem);
+  --step-0: max(16px, 1.125rem); /* body   */
+  --step-1: max(17px, 1.5625rem); /* h6     */
+  --step-2: max(19px, 1.875rem); /* h5     */
+  --step-3: max(22px, 2.625rem); /* h4     */
+  --step-4: max(26px, 3.4375rem); /* h3     */
+  --step-5: max(28px, 3.75rem); /* h2     */
+  --step-6: max(32px, 4.6875rem); /* h1 — 75px at a 16px root, under the 96px ceiling */
+
+  /* AUDIT FIX #4: the reference build had 2 letter-spacing declarations in
+     93 KB of CSS. 75px headings at tracking 0 read as undesigned. The floor
+     is -0.04em; below that letters touch. */
+  --tracking-display: -0.025em;
+  --leading-display: 1.02;
+
+  /* AUDIT FIX #5: body was 1.125rem/1.4 — cramped at that size. */
+  --leading-body: 1.6;
+  /* For large non-heading text (30px labels and intros) that is neither
+     display type nor long-form prose. Preserves the source's own 1.4. */
+  --leading-snug: 1.4;
+  --measure: 68ch; /* prose line-length cap, 65-75ch target */
+
+  /* --- 4. ELEVATION -----------------------------------------------------
+     AUDIT FIX #10: the reference build had eight one-off shadow values and
+     no scale. AUDIT FIX #9: its accent glow was `0 4px 16px 0 var(--accent)`
+     — fully opaque, which reads as cheap.
+     --------------------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgb(20 27 30 / 0.06), 0 1px 3px rgb(20 27 30 / 0.08);
+  --shadow-md: 0 4px 8px rgb(20 27 30 / 0.05), 0 9px 15px rgb(20 27 30 / 0.07);
+  --shadow-lg: 0 12px 24px rgb(20 27 30 / 0.08), 0 24px 56px rgb(20 27 30 / 0.1);
+  --shadow-glow: 0 4px 20px color-mix(in oklch, var(--accent) 35%, transparent);
+
+  /* AUDIT FIX #6: the source's amber survived tokenization in three rgba()
+     focus rings. Derived from the accent so it follows any rebrand. */
+  --ring: 0 0 0 0.2rem color-mix(in oklch, var(--accent) 40%, transparent);
+
+  /* --- 5. MOTION --------------------------------------------------------
+     AUDIT FIX #12: --ease-out was the generic `ease-out` keyword. Replaced
+     with ease-out-quart, which settles rather than drifts.
+
+     --ease-bounce is KEPT as-is: the back-to-top arrow's overshoot is a
+     deliberate signature of this design, not an accident.
+     --------------------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1); /* ease-out-quart   */
+  --ease-reveal: cubic-bezier(0.22, 1, 0.36, 1); /* menu ghost wipe  */
+  --ease-bounce: cubic-bezier(0.25, 1.7, 0.35, 1.5); /* back-to-top arrow */
+  --dur-fast: 0.2s; /* micro   */
+  --dur-base: 0.3s; /* panels  */
+  --dur-slow: 0.5s; /* cards   */
+  --dur-marquee: 10s;
+
+  /* --- 6. Z-INDEX -------------------------------------------------------
+     Semantic scale. Never arbitrary values like 999 or 9999.
+     --------------------------------------------------------------------- */
+  --z-sticky: 100;
+  --z-menu: 200;
+  --z-tooltip: 300;
+  --z-skip: 400;
+
+  /* Runtime values written by hooks, consumed by @keyframes. */
+  --menu-progress: 0%;
+  --marquee-width: 100vw;
+  --offset: 20vw;
+  --move-initial: calc(-25% + var(--offset));
+  --move-final: calc(-50% + var(--offset));
+}
+
+/* ==========================================================================
+   NO DARK THEME
+   Dream Weavers is a light brand: white surfaces, teal accent, ink type.
+   The dark palette and its toggle were removed deliberately — a second theme
+   doubles the surface every contrast fix has to hold across, and this site
+   has one job. Everything below the tokens assumes light.
+   ========================================================================== */

@@ -1,0 +1,40 @@
+{
+  "name": "dreamweavers",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "npx serve out -l 3000",
+    "media": "node scripts/fetch-media.mjs",
+    "icons": "node scripts/subset-icons.mjs",
+    "icons:brand": "node scripts/make-icons.mjs",
+    "og": "node scripts/make-og.mjs",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "verify": "npm run typecheck && npm run test:unit && npm run build && npm run test:e2e"
+  },
+  "dependencies": {
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@fortawesome/fontawesome-free": "^7.3.1",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "serve": "^14.2.6",
+    "sharp": "^0.35.3",
+    "subset-font": "^2.5.0",
+    "svgo": "^4.0.2",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

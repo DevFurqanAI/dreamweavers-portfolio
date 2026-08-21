@@ -654,8 +654,8 @@ p.max-para {
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 1.75rem;
-  font-size: max(13px, 1.1rem);
+  width: max(20px, 1.75rem);
+  font-size: max(15px, 1.1rem);
   color: var(--accent);
 }
 .hero-index-label {
@@ -769,13 +769,15 @@ p.max-para {
 .social-links a {
   display: grid;
   place-items: center;
-  /* 44x44, comfortably past the WCAG 2.2 24x24 minimum. These are small
-     glyphs and a near-miss on a phone is the whole failure mode. */
-  inline-size: 2.75rem;
-  block-size: 2.75rem;
+  /* 44x44, comfortably past the WCAG 2.2 24x24 minimum. AUDIT FIX #14:
+     this used to be a bare 2.75rem, which is 44px only at a 16px root — on
+     the phone where "a near-miss is the whole failure mode" it measured
+     22px. --tap floors it so the promise holds where it matters. */
+  inline-size: var(--tap);
+  block-size: var(--tap);
   border-radius: 50%;
   color: var(--fg-muted);
-  font-size: max(13px, 1rem);
+  font-size: var(--icon-glyph);
   text-decoration: none;
   transition: color var(--dur-fast) var(--ease-out),
     background-color var(--dur-fast) var(--ease-out);
@@ -1152,7 +1154,7 @@ p.max-para {
    box renders a small mark stranded in a wide tile. */
 .client-logo img {
   width: 100%;
-  height: 9rem;
+  height: max(64px, 9rem);
   object-fit: contain;
 }
 @media (max-width: 767px) {
@@ -1160,7 +1162,7 @@ p.max-para {
     margin-top: 3.5rem;
   }
   .client-logo img {
-    height: 5rem;
+    height: max(56px, 5rem);
   }
 }
 
@@ -1402,8 +1404,9 @@ p.max-para {
 .footer-social a {
   display: inline-grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  /* AUDIT FIX #14: 22px on a phone before the floor. */
+  width: var(--tap);
+  height: var(--tap);
   border: 1px solid var(--line);
   border-radius: 50%;
   transition: background-color var(--dur-fast) var(--ease-out),
@@ -1529,7 +1532,7 @@ p.max-para {
 }
 .section-technology-list .tech-box img {
   width: auto;
-  height: 5.5rem;
+  height: max(56px, 5.5rem);
   max-width: 100%;
   object-fit: contain;
 }
@@ -1541,11 +1544,14 @@ p.max-para {
   .section-technology-list {
     gap: 2.5rem 2.5rem;
   }
+  /* AUDIT FIX #14: 6rem/4rem resolve to 48px/32px at an 8px root, so the
+     tech marks rendered as 32px thumbnails. Floored; four 72px tiles plus
+     three 20px gaps still fit a 320px screen. */
   .section-technology-list .tech-box {
-    width: 6rem;
+    width: max(72px, 6rem);
   }
   .section-technology-list .tech-box img {
-    height: 4rem;
+    height: max(48px, 4rem);
   }
 }
 
@@ -1572,7 +1578,8 @@ p.max-para {
 }
 .main-header .main-logo-mark {
   width: auto;
-  height: 3.1rem;
+  /* AUDIT FIX #14: 3.1rem is 50px at a 16px root and 25px on a phone. */
+  height: max(40px, 3.1rem);
   max-height: none;
   flex: none;
 }
@@ -1602,7 +1609,10 @@ p.max-para {
     gap: 0.65rem;
   }
   .main-header .main-logo-mark {
-    height: 3.4rem;
+    /* AUDIT FIX #14: the larger rem multiplier below was the same workaround
+       applied to the mark, and it was just as insufficient — 3.4rem is 27px
+       at an 8px root. The floor is what actually holds the size. */
+    height: max(44px, 3.4rem);
   }
   /* The root scale drops to ~8px on a phone, so the wordmark needs a larger
      rem multiplier here just to hold its rendered size. */
@@ -1622,7 +1632,11 @@ p.max-para {
 /* The footer keeps the supplied stacked lockup. */
 .footer-logo img {
   width: auto;
-  height: 6.5rem;
+  /* AUDIT FIX #14: a `height: 6.5rem` sat here and had never applied —
+     theme.css carries `.main-footer .footer-logo img` at specificity (0,2,1)
+     against this rule's (0,1,1), so the shipped height has always been the
+     3.75rem declared there. The floor lives with the rule that actually
+     wins; declaring a second, losing height here only misled the reader. */
   max-width: 100%;
 }
 
@@ -2607,10 +2621,10 @@ p.max-para {
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: max(44px, 3.5rem);
+  height: max(44px, 3.5rem);
   border-radius: 14px;
-  font-size: max(17px, 1.65rem);
+  font-size: max(20px, 1.65rem);
   color: var(--accent);
   background: color-mix(in oklch, var(--accent) 9%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 22%, transparent);
@@ -2919,9 +2933,9 @@ p.max-para {
     padding-bottom: 3rem;
   }
   .section-service-hero .service-hero-icon {
-    width: 3rem;
-    height: 3rem;
-    font-size: max(15px, 1.4rem);
+    width: max(40px, 3rem);
+    height: max(40px, 3rem);
+    font-size: max(18px, 1.4rem);
     border-radius: 12px;
   }
   /* Full-width so the label is not squeezed onto two lines beside the CTA. */

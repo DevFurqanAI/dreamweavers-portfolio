@@ -48,13 +48,12 @@ const MANIFEST = [
   ['2024/04/fin.jpg', 'work/fintech.webp', 900],
 
   // --- team ---------------------------------------------------------------
-  // hassanJ and nimra are only linked as Elementor thumbnails on the live
+  // hassanJ is only linked as Elementor thumbnails on the live
   // site; these are the full-size -scaled originals behind them.
   ['2025/08/hassanJ-scaled.jpg', 'team/hassan.webp', 600],
   ['2025/08/Mohsin.jpg', 'team/mohsin.webp', 600],
   ['2025/08/Hasnain.jpg', 'team/hasnain.webp', 600],
   ['2025/08/Urwa.jpg', 'team/urwa.webp', 600],
-  ['2025/09/nimra-scaled.jpg', 'team/nimra.webp', 600],
 ];
 
 async function fetchBuffer(url) {

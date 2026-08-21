@@ -36,7 +36,6 @@ export const team: TeamMember[] = [
   { slug: 'muhammad-mohsin', name: 'Muhammad Mohsin', role: 'General Manager', photo: '/img/team/mohsin.webp' },
   { slug: 'muhammad-hasnain-jahangir', name: 'Muhammad Hasnain Jahangir', role: 'Logistics Manager', photo: '/img/team/hasnain.webp' },
   { slug: 'urwa-hassan', name: 'Urwa Hassan', role: 'Project Manager', photo: '/img/team/urwa.webp' },
-  { slug: 'nimra-bukhari', name: 'Nimra Bukhari', role: 'Senior Shopify Developer', photo: '/img/team/nimra.webp' },
 ];
 
 /**

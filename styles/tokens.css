@@ -161,6 +161,28 @@
   --leading-snug: 1.4;
   --measure: 68ch; /* prose line-length cap, 65-75ch target */
 
+  /* --- 3b. CHROME FLOORS -----------------------------------------------
+     AUDIT FIX #14 — the same defect as #13, in a different property.
+
+     Logos, icons and tap targets were sized in rem, so they rode the layout
+     scale down with everything else. Measured on the built site, a phone got
+     half the designed size of every piece of chrome:
+
+       header logo mark   50px designed -> 27px      social icon glyph 13px
+       footer logo        60px designed -> 30px      tap targets       22px
+
+     That last one is the serious one. `.social-links a` and `.footer-social a`
+     are declared `2.75rem` with a comment claiming "44x44, comfortably past
+     the WCAG 2.2 minimum" — true at a 16px root, and exactly half that on the
+     phone where a near-miss actually costs someone the tap.
+
+     Same remedy as the type steps: a px floor via max(), which only raises,
+     so the desktop design is untouched. Content images are NOT floored —
+     those size to their container and are supposed to shrink.
+     --------------------------------------------------------------------- */
+  --tap: max(44px, 2.75rem); /* WCAG 2.5.5 target; 2.75rem at a 16px root */
+  --icon-glyph: max(16px, 1rem); /* the glyph inside a tap target */
+
   /* --- 4. ELEVATION -----------------------------------------------------
      AUDIT FIX #10: the reference build had eight one-off shadow values and
      no scale. AUDIT FIX #9: its accent glow was `0 4px 16px 0 var(--accent)`

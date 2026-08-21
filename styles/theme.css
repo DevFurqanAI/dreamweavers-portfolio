@@ -1325,7 +1325,8 @@ p.text-indent {
     display: inline-block;
     margin-bottom: 1.875rem; }
 .main-footer .footer-logo img {
-      height: 3.75rem;
+      /* AUDIT FIX #14: 60px designed, 30px on a phone before the floor. */
+      height: max(48px, 3.75rem);
       width: auto;
       max-width: none;
       display: block; }
@@ -1416,8 +1417,9 @@ p.text-indent {
 .copyright .goto-top {
     color: var(--accent); }
 .copyright .goto-top .arrow-up {
-      height: 2.5rem;
-      width: 2.5rem;
+      /* AUDIT FIX #14: a 40px control that measured 20px on a phone. */
+      height: max(40px, 2.5rem);
+      width: max(40px, 2.5rem);
       display: inline-block;
       vertical-align: middle;
       border: 0.0625rem solid var(--accent-soft);
@@ -1905,11 +1907,11 @@ p.text-indent {
       overflow: hidden; }
 .section-our-services .service-box-icon {
       display: block;
-      height: 4.125rem; }
+      height: max(48px, 4.125rem); }
 @media (max-width: 425px) {
   .section-our-services .service-box-icon svg {
           width: auto;
-          height: 40px; }}
+          height: 48px; }}
 .section-our-services .service-box-heading {
       font: 700 max(16px, 1.5625rem)/1.4 var(--font-heavy);
       color: var(--c-black);
